@@ -1,0 +1,13 @@
+dynamic_tsid_controller:
+  joint_names: {
+    type: string_array,
+    default_value: [],
+    description: "Specifies joints names.",
+    read_only: true,
+  }
+
+  interface_name: {
+    type: string,
+    default_value: "effort",
+    description: "Name of the interface to command",
+  }
