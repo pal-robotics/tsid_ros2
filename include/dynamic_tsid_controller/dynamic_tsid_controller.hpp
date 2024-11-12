@@ -25,6 +25,10 @@
 #include "hardware_interface/component_parser.hpp"
 #include "pal_utils/better_enums.hpp"
 #include <dynamic_tsid_controller_params.hpp>
+#include <pinocchio/fwd.hpp>
+#include <pinocchio/multibody/model.hpp>
+#include <pinocchio/multibody/data.hpp>
+
 
 namespace dynamic_tsid_controller
 {
@@ -59,7 +63,6 @@ public:
 protected:
   dynamic_tsid_controller::Params params_;
   std::shared_ptr<dynamic_tsid_controller::ParamListener> param_listener_;
-
   std::vector<std::vector<std::string>> state_interface_names_;
 
   template<typename T>
@@ -67,10 +70,12 @@ protected:
   InterfaceReferences<hardware_interface::LoanedStateInterface> joint_state_interfaces_;
 
 private:
-  std::vector<std::string> actuator_names_;
   std::map<std::string, int> jnt_id_;
   bool first_update_ = true;
   bool tuning_mode_ = false;
+  pinocchio::Model model_;
+  pinocchio::Data data_;
+
 };
 }
 

@@ -16,6 +16,10 @@
 #include <pluginlib/class_list_macros.hpp>
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include <pinocchio/parsers/urdf.hpp>
+#include <pinocchio/algorithm/compute-all-terms.hpp>
+#include <pinocchio/algorithm/model.hpp>
+#include <pinocchio/algorithm/joint-configuration.hpp>
 
 using namespace controller_interface;
 // using hardware_interface::HW_IF_EFFORT;
@@ -99,7 +103,41 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
 
     idx++;
   }
+  /* ADDING INITIALIZATION OF PINOCCHIO */
 
+  /*VMO: Should we put joint model free flyer as root joint? Maybe no since we are commanding a force and not a position,
+  and the position of the mobile base does not affect it*/
+  pinocchio::urdf::buildModelFromXML(
+    this->get_robot_description(),
+    pinocchio::JointModelFreeFlyer(), model_);
+
+  RCLCPP_INFO(get_node()->get_logger(), "Model has been built, it has %d joints", model_.njoints);
+
+  for (auto joint : model_.names) {
+    RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
+  }
+
+  std::vector<pinocchio::JointIndex> joints_to_lock;
+  /*VMO: In this point we make a list of joints to remove from the model (in tiago case wheel joints and end effector joints)
+   These are actually the joints that we don't passs to the controller*/
+  for (auto & name : model_.names) {
+    if (name != "universe" && name != "root_joint" &&
+      std::find(
+        params_.joint_names.begin(), params_.joint_names.end(),
+        name) == params_.joint_names.end())
+    {
+      joints_to_lock.push_back(model_.getJointId(name));
+      RCLCPP_INFO(get_node()->get_logger(), "Lock joint %s: ", name.c_str());
+    }
+  }
+
+  /* Removing the unused joints from the model*/
+  model_ = buildReducedModel(model_, joints_to_lock, pinocchio::neutral(model_));
+
+  /* VMO: if we need to check the mass of the model to verify that it is more or less realistic*/
+  RCLCPP_INFO(
+    get_node()->get_logger(), "Total mass according to the model %f",
+    pinocchio::computeTotalMass(model_));
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
