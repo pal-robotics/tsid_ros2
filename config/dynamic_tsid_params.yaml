@@ -1,0 +1,4 @@
+dynamic_tsid_controller:
+  ros__parameters:
+    type: dynamic_tsid_controller/DynamicTsidController
+

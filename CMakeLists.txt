@@ -5,13 +5,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 find_package(pinocchio REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 generate_parameter_library(dynamic_tsid_controller_params
   src/dynamic_tsid_controller_parameters.yaml
@@ -23,6 +19,7 @@ ament_auto_add_library(dynamic_tsid_controller SHARED
 target_link_libraries(dynamic_tsid_controller dynamic_tsid_controller_params)
 
 pluginlib_export_plugin_description_file(controller_interface dynamic_tsid_controllers.xml)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gmock REQUIRED)
   find_package(ament_lint_auto REQUIRED)
@@ -49,4 +46,4 @@ if(BUILD_TESTING)
 
 endif()
 
-ament_auto_package()
+ament_auto_package(INSTALL_TO_SHARE launch config)

@@ -4,6 +4,9 @@ dynamic_tsid_controller:
     default_value: [],
     description: "Specifies joints names.",
     read_only: true,
+    validation: {
+      unique<>: null,
+    }
   }
 
   interface_name: {

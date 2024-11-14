@@ -105,34 +105,30 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   }
   /* ADDING INITIALIZATION OF PINOCCHIO */
 
-  /*VMO: Should we put joint model free flyer as root joint? Maybe no since we are commanding a force and not a position,
-  and the position of the mobile base does not affect it*/
   pinocchio::urdf::buildModelFromXML(
-    this->get_robot_description(),
-    pinocchio::JointModelFreeFlyer(), model_);
+    this->get_robot_description(), model_);
 
   RCLCPP_INFO(get_node()->get_logger(), "Model has been built, it has %d joints", model_.njoints);
 
-  for (auto joint : model_.names) {
-    RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
-  }
 
   std::vector<pinocchio::JointIndex> joints_to_lock;
   /*VMO: In this point we make a list of joints to remove from the model (in tiago case wheel joints and end effector joints)
    These are actually the joints that we don't passs to the controller*/
   for (auto & name : model_.names) {
     if (name != "universe" && name != "root_joint" &&
-      std::find(
-        params_.joint_names.begin(), params_.joint_names.end(),
-        name) == params_.joint_names.end())
+      (name.find("arm_") == std::string::npos) && (name.find("torso_") == std::string::npos) &&
+      std::find(params_.joint_names.begin(), params_.joint_names.end(), name) == params_.joint_names.end())
     {
       joints_to_lock.push_back(model_.getJointId(name));
-      RCLCPP_INFO(get_node()->get_logger(), "Lock joint %s: ", name.c_str());
     }
   }
 
   /* Removing the unused joints from the model*/
   model_ = buildReducedModel(model_, joints_to_lock, pinocchio::neutral(model_));
+
+  for (auto joint : model_.names) {
+    RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
+  }
 
   /* VMO: if we need to check the mass of the model to verify that it is more or less realistic*/
   RCLCPP_INFO(
