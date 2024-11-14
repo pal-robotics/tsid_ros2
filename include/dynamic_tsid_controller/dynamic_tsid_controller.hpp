@@ -28,6 +28,7 @@
 #include <pinocchio/fwd.hpp>
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
+#include <tsid/robots/robot-wrapper.hpp>
 
 
 namespace dynamic_tsid_controller
@@ -75,6 +76,7 @@ private:
   bool tuning_mode_ = false;
   pinocchio::Model model_;
   pinocchio::Data data_;
+  tsid::robots::RobotWrapper* robot_wrapper_;
 
 };
 }

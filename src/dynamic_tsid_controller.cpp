@@ -130,11 +130,14 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
     RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
   }
 
-  /* VMO: if we need to check the mass of the model to verify that it is more or less realistic*/
+  /* VMO: if we need to check the mass of the model to verify that it is more or less realistic
+  IPE: 18.21225 arms+torso ~= what we expected*/
   RCLCPP_INFO(
     get_node()->get_logger(), "Total mass according to the model %f",
     pinocchio::computeTotalMass(model_));
-
+  
+  // Initialization of the TSID
+  robot_wrapper = new tsdi::robots::RobotWrapper(model_);
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -199,6 +202,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // reset command buffer
+  // TODO: set 0.0 torque to stop it
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
