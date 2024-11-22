@@ -17,6 +17,7 @@
   <depend>rclcpp_lifecycle</depend>
   <depend>generate_parameter_library</depend>
   <depend>pinocchio</depend>
+  <depend>tsid</depend>
   
   <test_depend>ament_cmake_gmock</test_depend>
   <test_depend>ament_lint_auto</test_depend>

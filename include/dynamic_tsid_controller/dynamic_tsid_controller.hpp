@@ -29,6 +29,13 @@
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
+#include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
+#include <tsid/solvers/solver-HQP-eiquadprog.hpp>
+#include <tsid/solvers/solver-HQP-eiquadprog-rt.hpp>
+#include <tsid/solvers/solver-HQP-eiquadprog-fast.hpp>
+#include <tsid/tasks/task-joint-posture.hpp>
+#include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+#include <tsid/trajectories/trajectory-euclidian.hpp>
 
 
 namespace dynamic_tsid_controller
@@ -76,7 +83,8 @@ private:
   bool tuning_mode_ = false;
   pinocchio::Model model_;
   pinocchio::Data data_;
-  tsid::robots::RobotWrapper* robot_wrapper_;
+  tsid::robots::RobotWrapper * robot_wrapper_;
+  tsid::InverseDynamicsFormulationAccForce * formulation_;
 
 };
 }

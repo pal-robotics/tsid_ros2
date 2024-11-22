@@ -8,6 +8,7 @@ endif()
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 find_package(pinocchio REQUIRED)
+find_package(tsid REQUIRED)
 
 generate_parameter_library(dynamic_tsid_controller_params
   src/dynamic_tsid_controller_parameters.yaml
@@ -16,7 +17,14 @@ generate_parameter_library(dynamic_tsid_controller_params
 ament_auto_add_library(dynamic_tsid_controller SHARED
   src/dynamic_tsid_controller.cpp
 )
-target_link_libraries(dynamic_tsid_controller dynamic_tsid_controller_params)
+target_link_libraries(dynamic_tsid_controller dynamic_tsid_controller_params tsid::tsid
+pinocchio::pinocchio)
+target_include_directories(dynamic_tsid_controller PUBLIC
+  ${EIGEN3_INCLUDE_DIR}
+  ${PINOCCHIO_INCLUDE_DIRS}
+  ${tsid_INCLUDE_DIRS}
+)
+
 
 pluginlib_export_plugin_description_file(controller_interface dynamic_tsid_controllers.xml)
 

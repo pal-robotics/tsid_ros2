@@ -116,10 +116,12 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
    These are actually the joints that we don't passs to the controller*/
   for (auto & name : model_.names) {
     if (name != "universe" && name != "root_joint" &&
-      (name.find("arm_") == std::string::npos) && (name.find("torso_") == std::string::npos) &&
-      std::find(params_.joint_names.begin(), params_.joint_names.end(), name) == params_.joint_names.end())
+      std::find(
+        params_.joint_names.begin(), params_.joint_names.end(),
+        name) == params_.joint_names.end())
     {
       joints_to_lock.push_back(model_.getJointId(name));
+      RCLCPP_INFO(get_node()->get_logger(), "Lock joint %s: ", name.c_str());
     }
   }
 
@@ -135,9 +137,70 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   RCLCPP_INFO(
     get_node()->get_logger(), "Total mass according to the model %f",
     pinocchio::computeTotalMass(model_));
-  
+
   // Initialization of the TSID
-  robot_wrapper = new tsdi::robots::RobotWrapper(model_);
+  robot_wrapper_ = new tsid::robots::RobotWrapper(
+    model_,
+    tsid::robots::RobotWrapper::FLOATING_BASE_SYSTEM);
+
+  formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
+
+  // Joint Posture Task
+
+  auto posture_task = std::make_shared<tsid::tasks::TaskJointPosture>(
+    "task-posture",
+    *robot_wrapper_);
+  Eigen::VectorXd kp = 100 * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
+  posture_task->Kp(kp);
+  posture_task->Kd(kd);
+  int posture_priority = 1;  // 0 constraint, 1 cost function
+  double transition_time = 0.0;
+  double posture_weight = 1e-4;
+
+  Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
+
+  auto traj_posture = std::make_shared<tsid::trajectories::TrajectoryEuclidianConstant>(
+    "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
+  tsid::trajectories::TrajectorySample sample_posture = traj_posture->computeNext();
+  posture_task->setReference(sample_posture);
+  formulation_->addMotionTask(*posture_task, posture_weight, posture_priority, transition_time);
+
+  // Joint Bounds Task
+  auto bounds_task = std::make_shared<tsid::tasks::TaskJointPosVelAccBounds>(
+    "task-joint-bounds",
+    *robot_wrapper_, this->get_update_rate());
+  Eigen::VectorXd q_min = -M_PI * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd q_max = M_PI * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
+  bounds_task->setPositionBounds(q_min, q_max);
+  int bounds_priority = 0;  // 0 constraint, 1 cost function
+  double bounds_weight = 1e-4;
+  formulation_->addMotionTask(*bounds_task, bounds_weight, bounds_priority, transition_time);
+
+  // Joint velocity bounds
+  double v_scaling = 1.0;
+  Eigen::VectorXd v_max = v_scaling * model_.velocityLimit.tail(model_.nv - 6);
+  bounds_task->setVelocityBounds(v_max);
+  formulation_->addMotionTask(*bounds_task, bounds_weight, bounds_priority, transition_time);
+
+  // End effector task
+  auto ee_task = std::make_shared<tsid::tasks::TaskSE3Equality>(
+    "task-ee",
+    *robot_wrapper_,
+    "arm_left_7_link");
+
+  ee_task->Kp(300 * Eigen::VectorXd::Ones(6));
+  ee_task->Kd(2.0 * ee_task->Kp().cwiseSqrt());
+  Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
+  ee_mask << 1, 1, 1, 0, 0, 0;
+  ee_task->setMask(ee_mask);
+  ee_task->useLocalFrame(false);
+
+  double ee_weight = 1;
+  int ee_priority = 1;
+  formulation_->addMotionTask(*ee_task, ee_weight, ee_priority, transition_time);
+
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
