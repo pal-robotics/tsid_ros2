@@ -36,6 +36,7 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
+#include <tsid/trajectories/trajectory-se3.hpp>
 
 
 namespace dynamic_tsid_controller
@@ -85,6 +86,14 @@ private:
   pinocchio::Data data_;
   tsid::robots::RobotWrapper * robot_wrapper_;
   tsid::InverseDynamicsFormulationAccForce * formulation_;
+  tsid::solvers::SolverHQuadProgFast * solver_;
+  tsid::tasks::TaskJointPosture * task_joint_posture_;
+  tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
+  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
+  tsid::tasks::TaskSE3Equality * task_ee_;
+  pinocchio::SE3 H_ee_0_;
+  tsid::trajectories::TrajectorySE3Constant * traj_ee_;
+
 
 };
 }

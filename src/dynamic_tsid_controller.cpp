@@ -106,7 +106,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   /* ADDING INITIALIZATION OF PINOCCHIO */
 
   pinocchio::urdf::buildModelFromXML(
-    this->get_robot_description(), model_);
+    this->get_robot_description(), pinocchio::JointModelFreeFlyer(), model_);
 
   RCLCPP_INFO(get_node()->get_logger(), "Model has been built, it has %d joints", model_.njoints);
 
@@ -126,7 +126,8 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   }
 
   /* Removing the unused joints from the model*/
-  model_ = buildReducedModel(model_, joints_to_lock, pinocchio::neutral(model_));
+  model_ =
+    buildReducedModel(model_, joints_to_lock, pinocchio::neutral(model_));
 
   for (auto joint : model_.names) {
     RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
@@ -141,65 +142,67 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   // Initialization of the TSID
   robot_wrapper_ = new tsid::robots::RobotWrapper(
     model_,
-    tsid::robots::RobotWrapper::FLOATING_BASE_SYSTEM);
+    tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
 
   formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
 
   // Joint Posture Task
 
-  auto posture_task = std::make_shared<tsid::tasks::TaskJointPosture>(
-    "task-posture",
+  task_joint_posture_ = new tsid::tasks::TaskJointPosture(
+    "task-joint-posture",
     *robot_wrapper_);
   Eigen::VectorXd kp = 100 * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
   Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
-  posture_task->Kp(kp);
-  posture_task->Kd(kd);
+  task_joint_posture_->Kp(kp);
+  task_joint_posture_->Kd(kd);
   int posture_priority = 1;  // 0 constraint, 1 cost function
   double transition_time = 0.0;
   double posture_weight = 1e-4;
 
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
-  auto traj_posture = std::make_shared<tsid::trajectories::TrajectoryEuclidianConstant>(
+  traj_joint_posture_ = new tsid::trajectories::TrajectoryEuclidianConstant(
     "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
-  tsid::trajectories::TrajectorySample sample_posture = traj_posture->computeNext();
-  posture_task->setReference(sample_posture);
-  formulation_->addMotionTask(*posture_task, posture_weight, posture_priority, transition_time);
+  tsid::trajectories::TrajectorySample sample_posture = traj_joint_posture_->computeNext();
+  task_joint_posture_->setReference(sample_posture);
+  formulation_->addMotionTask(
+    *task_joint_posture_, posture_weight, posture_priority,
+    transition_time);
 
   // Joint Bounds Task
-  auto bounds_task = std::make_shared<tsid::tasks::TaskJointPosVelAccBounds>(
+  task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds",
     *robot_wrapper_, this->get_update_rate());
-  Eigen::VectorXd q_min = -M_PI * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
-  Eigen::VectorXd q_max = M_PI * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
-  bounds_task->setPositionBounds(q_min, q_max);
+  Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
+  Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
+  task_joint_bounds_->setPositionBounds(q_min, q_max);
   int bounds_priority = 0;  // 0 constraint, 1 cost function
   double bounds_weight = 1e-4;
-  formulation_->addMotionTask(*bounds_task, bounds_weight, bounds_priority, transition_time);
 
   // Joint velocity bounds
   double v_scaling = 1.0;
   Eigen::VectorXd v_max = v_scaling * model_.velocityLimit.tail(model_.nv - 6);
-  bounds_task->setVelocityBounds(v_max);
-  formulation_->addMotionTask(*bounds_task, bounds_weight, bounds_priority, transition_time);
+  task_joint_bounds_->setVelocityBounds(v_max);
+  formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
   // End effector task
-  auto ee_task = std::make_shared<tsid::tasks::TaskSE3Equality>(
-    "task-ee",
-    *robot_wrapper_,
-    "arm_left_7_link");
-
-  ee_task->Kp(300 * Eigen::VectorXd::Ones(6));
-  ee_task->Kd(2.0 * ee_task->Kp().cwiseSqrt());
+  task_ee_ = new tsid::tasks::TaskSE3Equality(
+    "task-ee", *robot_wrapper_, "arm_left_7_link");
+  task_ee_->Kp(300 * Eigen::VectorXd::Ones(6));
+  task_ee_->Kd(2.0 * task_ee_->Kp().cwiseSqrt());
   Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
   ee_mask << 1, 1, 1, 0, 0, 0;
-  ee_task->setMask(ee_mask);
-  ee_task->useLocalFrame(false);
+  task_ee_->setMask(ee_mask);
+  task_ee_->useLocalFrame(false);
 
   double ee_weight = 1;
   int ee_priority = 1;
-  formulation_->addMotionTask(*ee_task, ee_weight, ee_priority, transition_time);
+  formulation_->addMotionTask(*task_ee_, ee_weight, ee_priority, transition_time);
 
+  // Initializing solver
+  solver_ = new tsid::solvers::SolverHQuadProgFast("qp solver");
+
+  solver_->resize(formulation_->nVar(), formulation_->nEq(), formulation_->nIn());
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -227,7 +230,7 @@ DynamicTsidController::command_interface_configuration() const
 
   std::vector<std::string> command_interfaces_config_names;
   for (const auto & joint : params_.joint_names) {
-    const auto full_name = joint + "/effort";
+    const auto full_name = joint + "/position";
     command_interfaces_config_names.push_back(full_name);
   }
 
@@ -258,6 +261,32 @@ controller_interface::CallbackReturn DynamicTsidController::on_activate(
     }
   }
 
+  for (const auto & joint : params_.joint_names) {
+    RCLCPP_INFO(
+      get_node()->get_logger(), "Joint %s position: %f",
+      joint.c_str(), joint_state_interfaces_[jnt_id_[joint]][0].get().get_value());
+  }
+
+  // Taking initial position from the joint state interfaces
+  Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
+  for (const auto & joint : params_.joint_names) {
+    q0[model_.getJointId(joint) - 6] = joint_state_interfaces_[jnt_id_[joint]][0].get().get_value();
+  }
+  Eigen::VectorXd v0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
+  formulation_->computeProblemData(0.0, q0, v0);
+
+  // Setting posture task reference as initial position
+  traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nv() - 6));
+  task_joint_posture_->setReference(traj_joint_posture_->computeNext());
+
+
+  // Setting initial reference for the end effector task
+  H_ee_0_ =
+    robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId("arm_left_7_link"));
+  traj_ee_ = new tsid::trajectories::TrajectorySE3Constant("traj_ee", H_ee_0_);
+  tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_->computeNext();
+  task_ee_->setReference(sample_posture_ee);
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -274,8 +303,8 @@ controller_interface::return_type DynamicTsidController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
 
-  // If the controller is not in tuning mode the gains are set only once
   RCLCPP_INFO(get_node()->get_logger(), "Updating controller");
+
   return controller_interface::return_type::OK;
 }
 
