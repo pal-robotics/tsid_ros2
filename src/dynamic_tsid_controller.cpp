@@ -193,7 +193,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   double bounds_weight = 1;
 
   // Joint velocity bounds
-  double v_scaling = 1.0;
+  double v_scaling = 0.2;
   Eigen::VectorXd v_max = v_scaling * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_scaling * model_.velocityLimit.tail(model_.nv - 6);
   task_joint_bounds_->setVelocityBounds(v_min, v_max);
