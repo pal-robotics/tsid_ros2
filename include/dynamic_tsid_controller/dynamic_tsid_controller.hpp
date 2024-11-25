@@ -38,6 +38,7 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
+#include "std_msgs/msg/float64_multi_array.hpp"
 
 
 namespace dynamic_tsid_controller
@@ -70,6 +71,9 @@ public:
   controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state)
   override;
 
+  void setPoseCallback(
+    std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
+
 protected:
   dynamic_tsid_controller::Params params_;
   std::shared_ptr<dynamic_tsid_controller::ParamListener> param_listener_;
@@ -96,6 +100,8 @@ private:
   tsid::trajectories::TrajectorySE3Constant * traj_ee_;
   const tsid::trajectories::TrajectorySample sample_posture_ee_;
   rclcpp::Duration dt_;
+  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr ee_cmd_sub_;
+  Eigen::Vector3d desired_pose_;
 
 
 };

@@ -28,6 +28,8 @@ using namespace controller_interface;
 
 namespace dynamic_tsid_controller
 {
+using std::placeholders::_1;
+
 DynamicTsidController::DynamicTsidController()
 : controller_interface::ControllerInterface(),
   dt_(0, 0)
@@ -104,6 +106,12 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
 
     idx++;
   }
+  // Pose reference callback
+  ee_cmd_sub_ =
+    get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
+    "dynamic_tsid_controller/pose_cmd", 1,
+    std::bind(&DynamicTsidController::setPoseCallback, this, _1));
+
   /* ADDING INITIALIZATION OF PINOCCHIO */
 
   pinocchio::urdf::buildModelFromXML(
@@ -304,24 +312,11 @@ controller_interface::CallbackReturn DynamicTsidController::on_activate(
   tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_->computeNext();
   task_ee_->setReference(sample_posture_ee);
 
-  Eigen::Vector3d pos_x_des = H_ee_0_.translation() + Eigen::Vector3d(0.2, 0.0, 0.0);
-  Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-  ref.head(3) = pos_x_des;
-  ref.tail(9) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0; // useless because mask not taking orientation, but required from tsid to put at least identity
-  sample_posture_ee.setValue(ref);
-
-  task_ee_->setReference(sample_posture_ee);
 
   RCLCPP_INFO(
     get_node()->get_logger(), " Initial position ee : %f %f %f",
     H_ee_0_.translation()[0], H_ee_0_.translation()[1], H_ee_0_.translation()[2]);
 
-  auto ref_ee = task_ee_->getReference();
-
-  auto ref_pos = ref_ee.getValue();
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Reference position ee : %f %f %f",
-    ref_pos[0], ref_pos[1], ref_pos[2]);
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -380,6 +375,22 @@ controller_interface::return_type DynamicTsidController::update(
       q_cmd[model_.getJointId(joint) - 2]);
   }
 
+/*  auto h_ee =
+    robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId("arm_left_7_link"));
+
+  RCLCPP_INFO(
+    get_node()->get_logger(), " Current position ee : %f %f %f",
+    h_ee.translation()[0], h_ee.translation()[1], h_ee.translation()[2]);
+    */
+
+  return controller_interface::return_type::OK;
+}
+
+void DynamicTsidController::setPoseCallback(
+  std_msgs::msg::Float64MultiArray::ConstSharedPtr msg)
+{
+  desired_pose_ << msg->data[0], msg->data[1], msg->data[2];
+
   auto h_ee =
     robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId("arm_left_7_link"));
 
@@ -387,8 +398,25 @@ controller_interface::return_type DynamicTsidController::update(
     get_node()->get_logger(), " Current position ee : %f %f %f",
     h_ee.translation()[0], h_ee.translation()[1], h_ee.translation()[2]);
 
-  return controller_interface::return_type::OK;
+  Eigen::Vector3d pos_x_des = h_ee.translation() + desired_pose_;
+  Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
+  ref.head(3) = pos_x_des;
+  ref.tail(9) << 1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0; // useless because mask not taking orientation, but required from tsid to put at least identity
+  tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_->computeNext();
+
+  sample_posture_ee.setValue(ref);
+
+  task_ee_->setReference(sample_posture_ee);
+
+  auto ref_ee = task_ee_->getReference();
+
+  auto ref_pos = ref_ee.getValue();
+  RCLCPP_INFO(
+    get_node()->get_logger(), " Reference position ee : %f %f %f",
+    ref_pos[0], ref_pos[1], ref_pos[2]);
+
 }
+
 
 }  // namespace dynamic_tsid_controller
 #include "pluginlib/class_list_macros.hpp"
