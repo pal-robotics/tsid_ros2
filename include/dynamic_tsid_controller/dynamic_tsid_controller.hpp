@@ -35,6 +35,7 @@
 #include <tsid/solvers/solver-HQP-eiquadprog-fast.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+#include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 
@@ -88,11 +89,13 @@ private:
   tsid::InverseDynamicsFormulationAccForce * formulation_;
   tsid::solvers::SolverHQuadProgFast * solver_;
   tsid::tasks::TaskJointPosture * task_joint_posture_;
-  tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
+  tsid::tasks::TaskJointBounds * task_joint_bounds_;
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   tsid::tasks::TaskSE3Equality * task_ee_;
   pinocchio::SE3 H_ee_0_;
   tsid::trajectories::TrajectorySE3Constant * traj_ee_;
+  const tsid::trajectories::TrajectorySample sample_posture_ee_;
+  rclcpp::Duration dt_;
 
 
 };

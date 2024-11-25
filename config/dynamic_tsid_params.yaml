@@ -2,7 +2,6 @@ dynamic_tsid_controller:
   ros__parameters:
     type: dynamic_tsid_controller/DynamicTsidController
     joint_names:
-      - torso_lift_joint
       - arm_left_1_joint
       - arm_left_2_joint
       - arm_left_3_joint
