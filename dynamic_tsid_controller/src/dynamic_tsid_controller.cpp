@@ -74,6 +74,20 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  if (params_.ee_names.empty()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "The end effector name cannot be empty");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  // Storing names of desired end effector
+  ee_names_.resize(params_.ee_names.size());
+  desired_pose_.resize(params_.ee_names.size());
+  H_ee_0_.resize(params_.ee_names.size());
+
+  for (size_t i = 0; i < params_.ee_names.size(); i++) {
+    ee_names_[i] = params_.ee_names[i];
+  }
+
   // Create the state and command interfaces
   state_interfaces_.reserve(3 * params_.joint_names.size());
   command_interfaces_.reserve(params_.joint_names.size());
@@ -108,7 +122,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   }
   // Pose reference callback
   ee_cmd_sub_ =
-    get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
+    get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
     "dynamic_tsid_controller/pose_cmd", 1,
     std::bind(&DynamicTsidController::setPoseCallback, this, _1));
 
@@ -151,6 +165,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   // Getting control period
   dt_ = rclcpp::Duration(std::chrono::duration<double, std::milli>(1e3 / this->get_update_rate()));
   RCLCPP_INFO(get_node()->get_logger(), "Control period: %f", dt_.seconds());
+
   // Initialization of the TSID
   robot_wrapper_ = new tsid::robots::RobotWrapper(
     model_,
@@ -205,21 +220,25 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   }
   formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
-  // End effector task
-  task_ee_ = new tsid::tasks::TaskSE3Equality(
-    "task-ee", *robot_wrapper_, "arm_right_7_link");
-  Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
-  kp_gain << 1000, 1000, 1000, 500, 500, 500;
-  task_ee_->Kp(kp_gain);
-  task_ee_->Kd(2.0 * task_ee_->Kp().cwiseSqrt());
-  Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
-  ee_mask << 1, 1, 1, 1, 1, 1;
-  task_ee_->setMask(ee_mask);
-  task_ee_->useLocalFrame(false);
+  // End effector tasks, one for each end effector in the config
+  for (size_t i = 0; i < ee_names_.size(); i++) {
+    task_ee_.push_back(
+      new
+      tsid::tasks::TaskSE3Equality(
+        "task-ee" + std::to_string(i), *robot_wrapper_, ee_names_[i]));
+    Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+    kp_gain << 1000, 1000, 1000, 500, 500, 500;
+    task_ee_[i]->Kp(kp_gain);
+    task_ee_[i]->Kd(2.0 * task_ee_[i]->Kp().cwiseSqrt());
+    Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
+    ee_mask << 1, 1, 1, 1, 1, 1;
+    task_ee_[i]->setMask(ee_mask);
+    task_ee_[i]->useLocalFrame(false);
 
-  double ee_weight = 1;
-  int ee_priority = 1;
-  formulation_->addMotionTask(*task_ee_, ee_weight, ee_priority, transition_time);
+    double ee_weight = 1;
+    int ee_priority = 1;
+    formulation_->addMotionTask(*task_ee_[i], ee_weight, ee_priority, transition_time);
+  }
 
   // Initializing solver
   solver_ = new tsid::solvers::SolverHQuadProgFast("qp solver");
@@ -297,26 +316,34 @@ controller_interface::CallbackReturn DynamicTsidController::on_activate(
       2] = joint_state_interfaces_[jnt_id_[joint]][0].get().get_value();
   }
 
+
   Eigen::VectorXd v0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
+
+
   formulation_->computeProblemData(0.0, q0, v0);
+  RCLCPP_INFO(get_node()->get_logger(), "Initial position: %f", q0[0]);
 
   // Setting posture task reference as initial position
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
+  RCLCPP_INFO(get_node()->get_logger(), "Initial position: %f", q0[0]);
+
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
+  RCLCPP_INFO(get_node()->get_logger(), "Initial position: %f", q0[0]);
 
 
-  // Setting initial reference for the end effector task
-  H_ee_0_ =
-    robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId("arm_right_7_link"));
-  traj_ee_ = new tsid::trajectories::TrajectorySE3Constant("traj_ee", H_ee_0_);
-  tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_->computeNext();
-  task_ee_->setReference(sample_posture_ee);
+  // Setting initial reference for the end effector tasks
+  for (size_t i = 0; i < ee_names_.size(); i++) {
+    H_ee_0_[i] =
+      robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee_names_[i]));
+    traj_ee_.push_back(tsid::trajectories::TrajectorySE3Constant("traj_ee", H_ee_0_[i]));
+    tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_[i].computeNext();
+    task_ee_[i]->setReference(sample_posture_ee);
 
 
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Initial position ee : %f %f %f",
-    H_ee_0_.translation()[0], H_ee_0_.translation()[1], H_ee_0_.translation()[2]);
-
+    RCLCPP_INFO(
+      get_node()->get_logger(), " Initial position ee %s : %f %f %f", ee_names_[i].c_str(),
+      H_ee_0_[i].translation()[0], H_ee_0_[i].translation()[1], H_ee_0_[i].translation()[2]);
+  }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -375,49 +402,53 @@ controller_interface::return_type DynamicTsidController::update(
       q_cmd[model_.getJointId(joint) - 2]);
   }
 
-/*  auto h_ee =
-    robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId("arm_left_7_link"));
-
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Current position ee : %f %f %f",
-    h_ee.translation()[0], h_ee.translation()[1], h_ee.translation()[2]);
-    */
-
   return controller_interface::return_type::OK;
 }
 
 void DynamicTsidController::setPoseCallback(
-  std_msgs::msg::Float64MultiArray::ConstSharedPtr msg)
+  tsid_controller_msgs::msg::EePos::ConstSharedPtr msg)
 {
-  desired_pose_ << msg->data[0], msg->data[1], msg->data[2];
+  for (int i = 0; i < msg->ee_name.size(); i++) {
+    if (std::find(ee_names_.begin(), ee_names_.end(), msg->ee_name[i]) == ee_names_.end()) {
+      RCLCPP_WARN(
+        get_node()->get_logger(), "End effector %s not found in the list of end effectors, this command will be ignored",
+        msg->ee_name[i].c_str());
+    } else {
+      // Taking desired position from the message
+      desired_pose_[i] << msg->desired_pose[i].position.x, msg->desired_pose[i].position.y,
+        msg->desired_pose[i].position.z;
+      auto h_ee_ =
+        robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee_names_[i]));
 
-  auto h_ee =
-    robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId("arm_right_7_link"));
+      // Printing info about current position
+      RCLCPP_INFO(
+        get_node()->get_logger(), " Current position of ee %s : %f %f %f", ee_names_[i].c_str(),
+        h_ee_.translation()[0], h_ee_.translation()[1], h_ee_.translation()[2]);
 
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Current position ee : %f %f %f",
-    h_ee.translation()[0], h_ee.translation()[1], h_ee.translation()[2]);
+      // Setting the reference
 
-  Eigen::Vector3d pos_x_des = h_ee.translation() + desired_pose_;
-  Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-  ref.head(3) = pos_x_des;
+      Eigen::Vector3d pos_x_des = h_ee_.translation() + desired_pose_[i];
+      Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
+      ref.head(3) = pos_x_des;
+      ref.tail(9) << h_ee_.rotation()(0, 0), h_ee_.rotation()(0, 1), h_ee_.rotation()(0, 2),
+        h_ee_.rotation()(1, 0), h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
+        h_ee_.rotation()(2, 0),
+        h_ee_.rotation()(2, 1), h_ee_.rotation()(2, 2);   // useless because mask not taking orientation, but required from tsid to put at least identity
 
+      tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_[i].computeNext();
+      sample_posture_ee.setValue(ref);
+      task_ee_[i]->setReference(sample_posture_ee);
 
-  ref.tail(9) << h_ee.rotation()(0, 0), h_ee.rotation()(0, 1), h_ee.rotation()(0, 2),
-    h_ee.rotation()(1, 0), h_ee.rotation()(1, 1), h_ee.rotation()(1, 2), h_ee.rotation()(2, 0),
-    h_ee.rotation()(2, 1), h_ee.rotation()(2, 2);                                                                                         // useless because mask not taking orientation, but required from tsid to put at least identity
-  tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_->computeNext();
+      auto ref_ee = task_ee_[i]->getReference();
+      auto ref_pos = ref_ee.getValue();
 
-  sample_posture_ee.setValue(ref);
+      RCLCPP_INFO(
+        get_node()->get_logger(), " Reference position ee %s : %f %f %f", ee_names_[i].c_str(),
+        ref_pos[0], ref_pos[1], ref_pos[2]);
 
-  task_ee_->setReference(sample_posture_ee);
+    }
 
-  auto ref_ee = task_ee_->getReference();
-
-  auto ref_pos = ref_ee.getValue();
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Reference position ee : %f %f %f",
-    ref_pos[0], ref_pos[1], ref_pos[2]);
+  }
 
 }
 

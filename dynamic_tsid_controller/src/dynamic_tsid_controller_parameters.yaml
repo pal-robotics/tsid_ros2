@@ -14,3 +14,11 @@ dynamic_tsid_controller:
     default_value: "effort",
     description: "Name of the interface to command",
   }
+
+  ee_names: {
+    type: string_array,
+    default_value: [],
+    description: "Name of the end-effectors we want to control",
+    read_only: true,
+
+  }

@@ -38,7 +38,8 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include "std_msgs/msg/float64_multi_array.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "tsid_controller_msgs/msg/ee_pos.hpp"
 
 
 namespace dynamic_tsid_controller
@@ -72,7 +73,7 @@ public:
   override;
 
   void setPoseCallback(
-    std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
+    tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
 
 protected:
   dynamic_tsid_controller::Params params_;
@@ -95,13 +96,15 @@ private:
   tsid::tasks::TaskJointPosture * task_joint_posture_;
   tsid::tasks::TaskJointBounds * task_joint_bounds_;
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
-  tsid::tasks::TaskSE3Equality * task_ee_;
-  pinocchio::SE3 H_ee_0_;
-  tsid::trajectories::TrajectorySE3Constant * traj_ee_;
+  std::vector<tsid::tasks::TaskSE3Equality *> task_ee_;
+  std::vector<pinocchio::SE3> H_ee_0_;
+  std::vector<tsid::trajectories::TrajectorySE3Constant> traj_ee_;
   const tsid::trajectories::TrajectorySample sample_posture_ee_;
   rclcpp::Duration dt_;
-  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr ee_cmd_sub_;
-  Eigen::Vector3d desired_pose_;
+  rclcpp::Subscription<tsid_controller_msgs::msg::EePos>::SharedPtr ee_cmd_sub_;
+  std::vector<Eigen::Vector3d> desired_pose_;
+
+  std::vector<std::string> ee_names_;
 
 
 };
