@@ -36,14 +36,23 @@ def declare_actions(launch_description: LaunchDescription, launch_args: LaunchAr
         'config', 'dynamic_tsid_params.yaml')
     
     print(controller_config)
-    tsdi_spawner_node = Node(
+    tsid_spawner_node = Node(
         package='controller_manager',
         executable='spawner',
         arguments=[
             "dynamic_tsid_controller", "--param-file", controller_config, "--inactive"],
     )
-    launch_description.add_action(tsdi_spawner_node)
+    launch_description.add_action(tsid_spawner_node)
 
+    tsid_interactive_node = Node(   
+        package='tsid_interactive_marker',
+        executable='tsid_interactive_marker',
+        name='tsid_interactive_marker',  
+        output='screen'
+    )
+
+    launch_description.add_action(tsid_interactive_node)
+    
     return
 
 

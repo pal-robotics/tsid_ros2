@@ -86,6 +86,7 @@ protected:
 
 private:
   std::map<std::string, int> jnt_id_;
+  std::map<std::string, int> ee_id_;
   bool first_update_ = true;
   bool tuning_mode_ = false;
   pinocchio::Model model_;
