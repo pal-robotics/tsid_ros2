@@ -411,6 +411,9 @@ InteractiveMarkerTsidNode::make6DofMarker(
     tf2::Quaternion orien(1.0, 0.0, 0.0, 1.0);
     orien.normalize();
     control.orientation = tf2::toMsg(orien);
+    control.name = "rotate_x";
+    control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
+    int_marker.controls.push_back(control);
     control.name = "move_x";
     control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(control);
@@ -418,6 +421,9 @@ InteractiveMarkerTsidNode::make6DofMarker(
     orien = tf2::Quaternion(0.0, 1.0, 0.0, 1.0);
     orien.normalize();
     control.orientation = tf2::toMsg(orien);
+    control.name = "rotate_z";
+    control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
+    int_marker.controls.push_back(control);
     control.name = "move_z";
     control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(control);
@@ -425,9 +431,14 @@ InteractiveMarkerTsidNode::make6DofMarker(
     orien = tf2::Quaternion(0.0, 0.0, 1.0, 1.0);
     orien.normalize();
     control.orientation = tf2::toMsg(orien);
+    control.name = "rotate_y";
+    control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
+    int_marker.controls.push_back(control);
     control.name = "move_y";
     control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(control);
+
+
   }
 
   server_->insert(int_marker);
@@ -490,13 +501,7 @@ void InteractiveMarkerTsidNode::publish_cmd_()
 
   for (int i = 0; i < ee_to_update_.size(); i++) {
     message.ee_name[i] = ee_to_update_[i];
-    message.desired_pose[i].position.x = desired_pose_[i].position.x;
-    message.desired_pose[i].position.y = desired_pose_[i].position.y;
-    message.desired_pose[i].position.z = desired_pose_[i].position.z;
-    message.desired_pose[i].orientation.x = 0.0;
-    message.desired_pose[i].orientation.y = 0.0;
-    message.desired_pose[i].orientation.z = 0.0;
-    message.desired_pose[i].orientation.w = 1.0;
+    message.desired_pose[i] = desired_pose_[i];
   }
 
   publisher_->publish(message);

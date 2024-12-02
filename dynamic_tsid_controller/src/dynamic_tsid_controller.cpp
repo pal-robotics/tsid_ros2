@@ -95,6 +95,11 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   joint_state_interfaces_.resize(params_.joint_names.size());
   state_interface_names_.resize(params_.joint_names.size());
 
+  // TO REMOVE; creating publisher for current pose ee
+  publisher_curr_pos =
+    get_node()->create_publisher<geometry_msgs::msg::Pose>("current_position", 10);
+
+
   // Create the joint handles
   //Creating a map between index and joint
   int idx = 0;
@@ -209,7 +214,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   double bounds_weight = 1;
 
   // Joint velocity bounds
-  double v_scaling = 0.1;
+  double v_scaling = params_.velocity_scaling;
   Eigen::VectorXd v_max = v_scaling * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_scaling * model_.velocityLimit.tail(model_.nv - 6);
   task_joint_bounds_->setVelocityBounds(v_min, v_max);
@@ -228,8 +233,10 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
       new
       tsid::tasks::TaskSE3Equality(
         "task-ee" + ee, *robot_wrapper_, ee));
+
+    auto gain = params_.cartesian_gain.ee_names_map.at(ee);
     Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
-    kp_gain << 1000, 1000, 1000, 500, 500, 500;
+    kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch, gain.kp_yaw;
     task_ee_[ee_id_[ee]]->Kp(kp_gain);
     task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
@@ -364,8 +371,8 @@ controller_interface::return_type DynamicTsidController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
 
-  // setting reference pos for ee
-
+  // Updating params if new ones are available
+  updateParams();
 
   // Taking current state
   Eigen::VectorXd q = Eigen::VectorXd::Zero(robot_wrapper_->nq());
@@ -409,6 +416,25 @@ controller_interface::return_type DynamicTsidController::update(
   return controller_interface::return_type::OK;
 }
 
+void DynamicTsidController::updateParams()
+{
+  if (param_listener_->is_old(params_)) {
+    params_ = param_listener_->get_params();
+    RCLCPP_INFO(get_node()->get_logger(), "Updating parameters");
+    for (auto ee : ee_names_) {
+
+      auto gain = params_.cartesian_gain.ee_names_map.at(ee);
+      Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+      kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch, gain.kp_yaw;
+      task_ee_[ee_id_[ee]]->Kp(kp_gain);
+      task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
+    }
+
+
+  }
+
+}
+
 void DynamicTsidController::setPoseCallback(
   tsid_controller_msgs::msg::EePos::ConstSharedPtr msg)
 {
@@ -434,13 +460,17 @@ void DynamicTsidController::setPoseCallback(
 
         // Setting the reference
 
-        Eigen::Vector3d pos_x_des = desired_pose_[ee_id_[ee]];
+        Eigen::Quaterniond quat(
+          msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
+          msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
+
+        Eigen::Matrix3d rot = quat.toRotationMatrix();
+
+        pinocchio::SE3 se3(rot, desired_pose_[ee_id_[ee]]);
+
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-        ref.head(3) = pos_x_des;
-        ref.tail(9) << h_ee_.rotation()(0, 0), h_ee_.rotation()(0, 1), h_ee_.rotation()(0, 2),
-          h_ee_.rotation()(1, 0), h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
-          h_ee_.rotation()(2, 0),
-          h_ee_.rotation()(2, 1), h_ee_.rotation()(2, 2); // useless because mask not taking orientation, but required from tsid to put at least identity
+        tsid::math::SE3ToVector(se3, ref);
+        Eigen::Vector3d pos_x_des = desired_pose_[ee_id_[ee]];
 
         tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_[ee_id_[ee]].computeNext();
         sample_posture_ee.setValue(ref);
@@ -448,6 +478,17 @@ void DynamicTsidController::setPoseCallback(
 
         auto ref_ee = task_ee_[ee_id_[ee]]->getReference();
         auto ref_pos = ref_ee.getValue();
+
+        geometry_msgs::msg::Pose current_pose;
+        current_pose.position.x = h_ee_.translation()[0];
+        current_pose.position.y = h_ee_.translation()[1];
+        current_pose.position.z = h_ee_.translation()[2];
+        current_pose.orientation.x = 0;
+        current_pose.orientation.y = 0;
+        current_pose.orientation.z = 0;
+        current_pose.orientation.w = 1;
+
+        publisher_curr_pos->publish(current_pose);
 
         /* RCLCPP_INFO(
           get_node()->get_logger(), " Reference position ee %s : %f %f %f", ee.c_str(),

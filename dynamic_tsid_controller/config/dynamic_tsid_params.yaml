@@ -14,5 +14,17 @@ dynamic_tsid_controller:
 
     ee_names:
       - arm_right_7_link
+
+    velocity_scaling: 0.2
+
+
+    cartesian_gain:
+        arm_right_7_link:
+          kp_x: 1000.0
+          kp_y: 1000.0
+          kp_z: 1500.0
+          kp_roll: 500.0
+          kp_pitch: 500.0
+          kp_yaw: 500.0
     
 

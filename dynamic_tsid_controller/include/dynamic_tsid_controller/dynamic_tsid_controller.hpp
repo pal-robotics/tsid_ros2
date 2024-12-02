@@ -38,7 +38,7 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "tsid_controller_msgs/msg/ee_pos.hpp"
 
 
@@ -106,6 +106,11 @@ private:
   std::vector<Eigen::Vector3d> desired_pose_;
 
   std::vector<std::string> ee_names_;
+
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos;
+
+
+  void updateParams();
 
 
 };

@@ -22,3 +22,43 @@ dynamic_tsid_controller:
     read_only: true,
 
   }
+
+  velocity_scaling: {
+    type: double,
+    default_value: 0.5,
+    description: "Scaling factor for the velocity command",
+  }
+
+
+  cartesian_gain:
+    __map_ee_names:
+      kp_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position gain in x direction",
+      }
+      kp_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position gain in y direction",
+      }
+      kp_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position gain in z direction",
+      }
+      kp_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation gain in roll direction",
+      }
+      kp_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation gain in pitch direction",
+      }
+      kp_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation gain in yaw direction",
+      }
