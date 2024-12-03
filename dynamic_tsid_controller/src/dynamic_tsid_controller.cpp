@@ -140,6 +140,13 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   RCLCPP_INFO(get_node()->get_logger(), "Model has been built, it has %d joints", model_.njoints);
 
 
+  /*for (size_t i = 0; i < model_.frames.size(); ++i) {
+    const auto & frame = model_.frames[i];
+    std::cout << "Frame " << i << ": " << frame.name
+              << ", type: " << frame.type << std::endl;
+  }*/
+
+
   std::vector<pinocchio::JointIndex> joints_to_lock;
   /*VMO: In this point we make a list of joints to remove from the model (in tiago case wheel joints and end effector joints)
    These are actually the joints that we don't passs to the controller*/
@@ -161,6 +168,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   for (auto joint : model_.names) {
     RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
   }
+
 
   /* VMO: if we need to check the mass of the model to verify that it is more or less realistic
   IPE: 18.21225 arms+torso ~= what we expected*/
@@ -184,7 +192,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   task_joint_posture_ = new tsid::tasks::TaskJointPosture(
     "task-joint-posture",
     *robot_wrapper_);
-  Eigen::VectorXd kp = 100.0 * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd kp = params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
   Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
   task_joint_posture_->Kp(kp);
   task_joint_posture_->Kd(kd);
@@ -242,7 +250,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
     task_ee_[ee_id_[ee]]->setMask(ee_mask);
-    task_ee_[ee_id_[ee]]->useLocalFrame(false);
+    task_ee_[ee_id_[ee]]->useLocalFrame(true);
 
     double ee_weight = 1;
     int ee_priority = 1;
@@ -429,6 +437,9 @@ void DynamicTsidController::updateParams()
       task_ee_[ee_id_[ee]]->Kp(kp_gain);
       task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
     }
+
+    task_joint_posture_->Kp(params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6));
+    task_joint_posture_->Kd(2.0 * task_joint_posture_->Kp().cwiseSqrt());
 
 
   }

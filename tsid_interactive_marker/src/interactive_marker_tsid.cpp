@@ -170,7 +170,7 @@ void InteractiveMarkerTsidNode::on_timer()
   geometry_msgs::msg::TransformStamped transformStamped;
 
   transformStamped = tf_buffer_->lookupTransform(
-    "base_link", "arm_left_7_link",
+    "base_footprint", "arm_left_7_link",
     tf2::TimePointZero, tf2::durationFromSec(5.0));
 
   current_position_left_[0] = transformStamped.transform.translation.x;
@@ -178,15 +178,19 @@ void InteractiveMarkerTsidNode::on_timer()
   current_position_left_[2] = transformStamped.transform.translation.z;
 
   transformStamped = tf_buffer_->lookupTransform(
-    "base_link", "arm_right_7_link",
+    "base_footprint", "arm_right_7_link",
     tf2::TimePointZero, tf2::durationFromSec(5.0));
-
+  RCLCPP_INFO(
+    get_logger(), "Right arm position: %f %f %f",
+    transformStamped.transform.translation.x,
+    transformStamped.transform.translation.y,
+    transformStamped.transform.translation.z);
   current_position_right_[0] = transformStamped.transform.translation.x;
   current_position_right_[1] = transformStamped.transform.translation.y;
   current_position_right_[2] = transformStamped.transform.translation.z;
 
   transformStamped = tf_buffer_->lookupTransform(
-    "base_link", "arm_head_7_link",
+    "base_footprint", "arm_head_7_link",
     tf2::TimePointZero, tf2::durationFromSec(5.0));
 
   current_position_head_[0] = transformStamped.transform.translation.x;
@@ -379,7 +383,7 @@ InteractiveMarkerTsidNode::make6DofMarker(
   }
 
   visualization_msgs::msg::InteractiveMarker int_marker;
-  int_marker.header.frame_id = "base_link";
+  int_marker.header.frame_id = "base_footprint";
 
   if (frame_name == "arm_left_7_link") {
     int_marker.pose.position.x = current_position_left_[0];
@@ -389,6 +393,9 @@ InteractiveMarkerTsidNode::make6DofMarker(
     int_marker.pose.position.x = current_position_right_[0];
     int_marker.pose.position.y = current_position_right_[1];
     int_marker.pose.position.z = current_position_right_[2];
+    RCLCPP_INFO(
+      get_logger(), "Right arm position: %f %f %f",
+      current_position_right_[0], current_position_right_[1], current_position_right_[2]);
   } else if (frame_name == "arm_head_7_link") {
     int_marker.pose.position.x = current_position_head_[0];
     int_marker.pose.position.y = current_position_head_[1];
@@ -466,7 +473,7 @@ InteractiveMarkerTsidNode::makeButtonMarker(const tf2::Vector3 & position)
 {
 
   visualization_msgs::msg::InteractiveMarker int_marker;
-  int_marker.header.frame_id = "base_link";
+  int_marker.header.frame_id = "base_footprint";
   int_marker.pose.position.x = 0.0;
   int_marker.pose.position.y = -1.0;
   int_marker.pose.position.z = 0.0;
@@ -502,6 +509,7 @@ void InteractiveMarkerTsidNode::publish_cmd_()
   for (int i = 0; i < ee_to_update_.size(); i++) {
     message.ee_name[i] = ee_to_update_[i];
     message.desired_pose[i] = desired_pose_[i];
+    message.desired_pose[i].position.z = desired_pose_[i].position.z - 0.14;
   }
 
   publisher_->publish(message);

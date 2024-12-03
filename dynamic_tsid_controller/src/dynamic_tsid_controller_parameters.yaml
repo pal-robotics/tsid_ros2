@@ -29,6 +29,11 @@ dynamic_tsid_controller:
     description: "Scaling factor for the velocity command",
   }
 
+  posture_gain: {
+    type: double,
+    default_value: 50.0,
+    description: "Gain for the posture task",
+  }
 
   cartesian_gain:
     __map_ee_names:
