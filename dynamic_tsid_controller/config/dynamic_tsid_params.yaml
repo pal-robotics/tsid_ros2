@@ -19,7 +19,7 @@ dynamic_tsid_controller:
 
     velocity_scaling: 1.0
 
-    posture_gain: 0.0
+    posture_gain: 1.0
 
     cartesian_gain:
         arm_right_7_link:
