@@ -6,9 +6,14 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake_auto REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 REQUIRED)
+
 ament_auto_find_build_dependencies()
-find_package(pinocchio REQUIRED)
-find_package(tsid REQUIRED)
+find_package(pinocchio_vendor REQUIRED)
+find_package(tsid_vendor REQUIRED)
+find_package(eiquadprog_vendor REQUIRED)
+
 
 generate_parameter_library(dynamic_tsid_controller_params
   src/dynamic_tsid_controller_parameters.yaml
@@ -17,12 +22,14 @@ generate_parameter_library(dynamic_tsid_controller_params
 ament_auto_add_library(dynamic_tsid_controller SHARED
   src/dynamic_tsid_controller.cpp
 )
-target_link_libraries(dynamic_tsid_controller dynamic_tsid_controller_params tsid::tsid
-pinocchio::pinocchio)
+target_link_libraries(dynamic_tsid_controller dynamic_tsid_controller_params     ${tsid_vendor_LIBRARIES}
+${pinocchio_vendor_LIBRARIES} ${eiquadprog_vendor_LIBRARIES}
+)
 target_include_directories(dynamic_tsid_controller PUBLIC
   ${EIGEN3_INCLUDE_DIR}
-  ${PINOCCHIO_INCLUDE_DIRS}
-  ${tsid_INCLUDE_DIRS}
+  ${pinocchio_vendor_INCLUDE_DIRS}
+  ${tsid_vendor_INCLUDE_DIRS}
+  ${eiquadprog_vendor_INCLUDE_DIRS}
 )
 
 

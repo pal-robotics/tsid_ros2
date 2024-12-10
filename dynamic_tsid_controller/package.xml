@@ -8,6 +8,7 @@
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
@@ -16,8 +17,10 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>generate_parameter_library</depend>
-  <depend>pinocchio</depend>
-  <depend>tsid</depend>
+  <depend>pinocchio_vendor</depend>
+  <depend>tsid_vendor</depend>
+  <depend>eiquadprog_vendor</depend>
+
   <depend>tsid_controller_msgs</depend>
   <depend>tsid_interactive_marker</depend>
   

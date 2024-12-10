@@ -52,13 +52,7 @@ public:
     bool fixed, std::string frame_name, unsigned int interaction_mode,
     const tf2::Vector3 & position, bool show_6dof);
 
-  void
-  makeButtonMarker(const tf2::Vector3 & position);
-
 private:
-  void
-  frameCallback();
-
   void
   processFeedbackLeft(
     const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback);
@@ -69,10 +63,6 @@ private:
 
   void
   processFeedbackHead(
-    const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback);
-
-  void
-  processButtonFeedback(
     const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback);
 
   void
@@ -140,12 +130,9 @@ InteractiveMarkerTsidNode::InteractiveMarkerTsidNode(const rclcpp::NodeOptions &
 
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(10), std::bind(&InteractiveMarkerTsidNode::on_timer, this));
-  // create a timer to update the published transforms
-  frame_timer_ = create_wall_timer(
-    std::chrono::milliseconds(10), std::bind(&InteractiveMarkerTsidNode::frameCallback, this));
 
   timer_cmd_ = this->create_wall_timer(
-    std::chrono::milliseconds(10), std::bind(&InteractiveMarkerTsidNode::publish_cmd_, this));
+    std::chrono::milliseconds(5), std::bind(&InteractiveMarkerTsidNode::publish_cmd_, this));
 }
 
 visualization_msgs::msg::Marker
@@ -210,66 +197,6 @@ InteractiveMarkerTsidNode::makeBoxControl(visualization_msgs::msg::InteractiveMa
   msg.controls.push_back(control);
 
   return msg.controls.back();
-}
-
-void
-InteractiveMarkerTsidNode::frameCallback()
-{
-  static uint32_t counter = 0;
-
-  if (!tf_broadcaster_) {
-    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(shared_from_this());
-  }
-
-  tf2::TimePoint tf_time_point(std::chrono::nanoseconds(this->get_clock()->now().nanoseconds()));
-
-  tf2::Stamped<tf2::Transform> transform;
-  transform.stamp_ = tf_time_point;
-  transform.frame_id_ = "gripper_thumb_finger_tip_link";
-  transform.setOrigin(tf2::Vector3(0.0, 0.0, sin(static_cast<double>(counter) / 140.0) * 2.0));
-  transform.setRotation(tf2::Quaternion(0.0, 0.0, 0.0, 1.0));
-
-  geometry_msgs::msg::TransformStamped transform_msg;
-  transform_msg = tf2::toMsg(transform);
-  transform_msg.child_frame_id = "moving_frame";
-  tf_broadcaster_->sendTransform(transform_msg);
-
-  transform.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
-  tf2::Quaternion quat;
-  quat.setRPY(0.0, static_cast<double>(counter) / 140.0, 0.0);
-  transform.setRotation(quat);
-  transform_msg = tf2::toMsg(transform);
-  transform_msg.child_frame_id = "rotating_frame";
-  tf_broadcaster_->sendTransform(transform_msg);
-
-  counter++;
-}
-void
-InteractiveMarkerTsidNode::processButtonFeedback(
-  const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback)
-{
-  if (feedback->event_type == visualization_msgs::msg::InteractiveMarkerFeedback::MOUSE_UP) {
-    auto message = tsid_controller_msgs::msg::EePos();
-
-    message.ee_name.resize(ee_to_update_.size());
-    message.desired_pose.resize(ee_to_update_.size());
-
-    for (int i = 0; i < ee_to_update_.size(); i++) {
-      message.ee_name[i] = ee_to_update_[i];
-      message.desired_pose[i].position.x = desired_pose_[i].position.x;
-      message.desired_pose[i].position.y = desired_pose_[i].position.y;
-      message.desired_pose[i].position.z = desired_pose_[i].position.z;
-      message.desired_pose[i].orientation.x = 0.0;
-      message.desired_pose[i].orientation.y = 0.0;
-      message.desired_pose[i].orientation.z = 0.0;
-      message.desired_pose[i].orientation.w = 1.0;
-    }
-
-
-    publisher_->publish(message);
-  }
-
-  server_->applyChanges();
 }
 
 void
@@ -468,37 +395,6 @@ InteractiveMarkerTsidNode::make6DofMarker(
   }
 }
 
-void
-InteractiveMarkerTsidNode::makeButtonMarker(const tf2::Vector3 & position)
-{
-
-  visualization_msgs::msg::InteractiveMarker int_marker;
-  int_marker.header.frame_id = "base_footprint";
-  int_marker.pose.position.x = 0.0;
-  int_marker.pose.position.y = -1.0;
-  int_marker.pose.position.z = 0.0;
-  int_marker.scale = 0.1;
-
-  int_marker.name = "button";
-  int_marker.description = "Button_Send_Command";
-
-  visualization_msgs::msg::InteractiveMarkerControl control;
-
-  control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::BUTTON;
-  control.name = "button_control";
-
-
-  visualization_msgs::msg::Marker marker = makeBox(int_marker);
-  control.markers.push_back(marker);
-  control.always_visible = true;
-  int_marker.controls.push_back(control);
-
-  server_->insert(int_marker);
-  server_->setCallback(
-    int_marker.name,
-    std::bind(&InteractiveMarkerTsidNode::processButtonFeedback, this, _1));
-}
-
 void InteractiveMarkerTsidNode::publish_cmd_()
 {
   auto message = tsid_controller_msgs::msg::EePos();
@@ -536,9 +432,6 @@ int main(int argc, char ** argv)
     false, "arm_head_7_link",
     visualization_msgs::msg::InteractiveMarkerControl::MOVE_ROTATE_3D, position, true);
   position = tf2::Vector3(0, 0, 0);
-
-
-  tsid_markers->makeButtonMarker(position);
 
   tsid_markers->applyChanges();
 

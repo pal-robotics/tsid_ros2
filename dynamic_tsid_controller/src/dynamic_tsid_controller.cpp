@@ -198,7 +198,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   task_joint_posture_->Kd(kd);
   int posture_priority = 1;  // 0 constraint, 1 cost function
   double transition_time = 0.0;
-  double posture_weight = 1e-2;
+  double posture_weight = 1e-3;
 
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
@@ -206,9 +206,9 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
     "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
   tsid::trajectories::TrajectorySample sample_posture = traj_joint_posture_->computeNext();
   task_joint_posture_->setReference(sample_posture);
-  formulation_->addMotionTask(
-    *task_joint_posture_, posture_weight, posture_priority,
-    transition_time);
+  //formulation_ ->addMotionTask(
+  //  * task_joint_posture_, posture_weight, posture_priority,
+  //  transition_time );
 
 
   // Joint Bounds Task
@@ -250,7 +250,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
     task_ee_[ee_id_[ee]]->setMask(ee_mask);
-    task_ee_[ee_id_[ee]]->useLocalFrame(true);
+    task_ee_[ee_id_[ee]]->useLocalFrame(false);
 
     double ee_weight = 1;
     int ee_priority = 1;
@@ -419,7 +419,11 @@ controller_interface::return_type DynamicTsidController::update(
   for (const auto & joint : params_.joint_names) {
     command_interfaces_[jnt_id_[joint]].set_value(
       q_cmd[model_.getJointId(joint) - 2]);
+    RCLCPP_INFO(
+      get_node()->get_logger(), "Joint %s position: %f", joint.c_str(),
+      command_interfaces_[jnt_id_[joint]].get_value());
   }
+
 
   return controller_interface::return_type::OK;
 }
@@ -471,20 +475,29 @@ void DynamicTsidController::setPoseCallback(
 
         // Setting the reference
 
-        Eigen::Quaterniond quat(
-          msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
-          msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
+        /*  Eigen::Quaterniond quat(
+            msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
+            msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
 
-        Eigen::Matrix3d rot = quat.toRotationMatrix();
+          Eigen::Matrix3d rot = quat.toRotationMatrix();
 
-        pinocchio::SE3 se3(rot, desired_pose_[ee_id_[ee]]);
+          pinocchio::SE3 se3(rot, desired_pose_[ee_id_[ee]]);*/
+
 
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-        tsid::math::SE3ToVector(se3, ref);
+        //  tsid::math::SE3ToVector(se3, ref);
         Eigen::Vector3d pos_x_des = desired_pose_[ee_id_[ee]];
+
+        ref.head(3) = pos_x_des;
+
+        ref.tail(9) << h_ee_.rotation()(0, 0), h_ee_.rotation()(0, 1), h_ee_.rotation()(0, 2),
+          h_ee_.rotation()(1, 0), h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
+          h_ee_.rotation()(2, 0),
+          h_ee_.rotation()(2, 1), h_ee_.rotation()(2, 2);
 
         tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_[ee_id_[ee]].computeNext();
         sample_posture_ee.setValue(ref);
+
         task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
 
         auto ref_ee = task_ee_[ee_id_[ee]]->getReference();
@@ -501,7 +514,23 @@ void DynamicTsidController::setPoseCallback(
 
         publisher_curr_pos->publish(current_pose);
 
-        /* RCLCPP_INFO(
+
+        // Computing inverse kinematics To implement?
+
+        /*   Eigen::VectorXd q = Eigen::VectorXd::Zero(robot_wrapper_->nq());
+           q[6] = 1.0;
+
+           for (const auto & joint : params_.joint_names) {
+             q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) -
+               2] = joint_state_interfaces_[jnt_id_[joint]][Interfaces::position].get().get_value();
+           }
+
+           traj_joint_posture_->setReference(q.tail(robot_wrapper_->nq() - 7));
+
+           task_joint_posture_->setReference(traj_joint_posture_->computeNext());*/
+
+
+        /*RCLCPP_INFO(
           get_node()->get_logger(), " Reference position ee %s : %f %f %f", ee.c_str(),
           ref_pos[0], ref_pos[1], ref_pos[2]);*/
 
