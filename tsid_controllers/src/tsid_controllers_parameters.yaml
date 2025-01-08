@@ -1,4 +1,4 @@
-dynamic_tsid_controller:
+tsid_controllers:
   joint_names: {
     type: string_array,
     default_value: [],

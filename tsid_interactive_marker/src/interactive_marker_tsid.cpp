@@ -112,7 +112,7 @@ InteractiveMarkerTsidNode::InteractiveMarkerTsidNode(const rclcpp::NodeOptions &
     get_node_services_interface());
 
   publisher_ = this->create_publisher<tsid_controller_msgs::msg::EePos>(
-    "dynamic_tsid_controller/pose_cmd",
+    "cartesian_space_controller/pose_cmd",
     10);
 
   marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("Origin", 10);

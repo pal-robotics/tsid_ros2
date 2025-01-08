@@ -1,9 +1,0 @@
-<library path="dynamic_tsid_controller">
-  <class name="dynamic_tsid_controller/DynamicTsidController"
-         type="dynamic_tsid_controller::DynamicTsidController" 
-         base_class_type="controller_interface::ControllerInterface">
-  <description>
-      A controller to be able to tune the PIDs of difference control modes of different actuators
-  </description>
-  </class>
-</library>

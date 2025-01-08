@@ -29,18 +29,18 @@ class LaunchArguments(LaunchArgumentsBase):
 def declare_actions(launch_description: LaunchDescription, launch_args: LaunchArguments):
 
     pkg_share_directory = get_package_share_directory(
-        'dynamic_tsid_controller')
+        'tsid_controllers')
 
     controller_config = os.path.join(
         pkg_share_directory,
-        'config', 'dynamic_tsid_params.yaml')
+        'config', 'cartesian_space_params.yaml')
     
     print(controller_config)
     tsid_spawner_node = Node(
         package='controller_manager',
         executable='spawner',
         arguments=[
-            "dynamic_tsid_controller", "--param-file", controller_config, "--inactive"],
+            "cartesian_space_controller", "--param-file", controller_config, "--inactive"],
     )
     launch_description.add_action(tsid_spawner_node)
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef DYNAMIC_TISD_CONTROLLER_HPP_
-#define DYNAMIC_TISD_CONTROLLER_HPP_
+#ifndef CARTESIAN_SPACE_CONTROLLER_HPP_
+#define CARTESIAN_SPACE_CONTROLLER_HPP_
 
 #include <memory>
 #include <string>
@@ -24,7 +24,7 @@
 #include <hardware_interface/actuator_interface.hpp>
 #include "hardware_interface/component_parser.hpp"
 #include "pal_utils/better_enums.hpp"
-#include <dynamic_tsid_controller_params.hpp>
+#include <tsid_controllers_params.hpp>
 #include <pinocchio/fwd.hpp>
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
@@ -42,17 +42,17 @@
 #include "tsid_controller_msgs/msg/ee_pos.hpp"
 
 
-namespace dynamic_tsid_controller
+namespace tsid_controllers
 {
 BETTER_ENUM(
   Interfaces, int, position = 0, velocity = 1, effort = 2);
 
 
-class DynamicTsidController
+class CartesianSpaceController
   : public controller_interface::ControllerInterface
 {
 public:
-  DynamicTsidController();
+  CartesianSpaceController();
 
 
   controller_interface::CallbackReturn on_init() override;
@@ -76,8 +76,8 @@ public:
     tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
 
 protected:
-  dynamic_tsid_controller::Params params_;
-  std::shared_ptr<dynamic_tsid_controller::ParamListener> param_listener_;
+  tsid_controllers::Params params_;
+  std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
   std::vector<std::vector<std::string>> state_interface_names_;
 
   template<typename T>
@@ -116,4 +116,4 @@ private:
 };
 }
 
-#endif  // DYNAMIC_TISD_CONTROLLER_HPP_
+#endif  // CARTESIAN_SPACE_CONTROLLER_HPP_

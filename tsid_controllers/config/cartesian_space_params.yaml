@@ -1,6 +1,6 @@
-dynamic_tsid_controller:
+cartesian_space_controller:
   ros__parameters:
-    type: dynamic_tsid_controller/DynamicTsidController
+    type: tsid_controllers/CartesianSpaceController
     update_rate: 25
     
     joint_names:

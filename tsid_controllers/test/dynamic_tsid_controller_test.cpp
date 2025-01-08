@@ -14,12 +14,11 @@
 
 #include <gmock/gmock.h>
 
-
 #include "hardware_interface/loaned_command_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "hardware_interface/loaned_command_interface.hpp"
-#include "dynamic_tsid_controller/dynamic_tsid_controller.hpp"
+#include "tsid_controllers/cartesian_space_controller.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 
 
@@ -40,7 +39,7 @@ public:
   {
     // initialize controller
     controller_ =
-      std::make_unique<dynamic_tsid_controller::DynamicTsidController>();
+      std::make_unique<  tsid_controllers::CartesianSpaceController>();
   }
 
   void TearDown()
@@ -63,7 +62,7 @@ public:
   }
 
 protected:
-  std::unique_ptr<dynamic_tsid_controller::DynamicTsidController>
+  std::unique_ptr<  tsid_controllers::CartesianSpaceController>
   controller_;
 
   std::vector<double> joint_states_ = {1.1, 2.1, 3.1};

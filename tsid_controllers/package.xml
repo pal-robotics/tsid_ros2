@@ -1,11 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>dynamic_tsid_controller</name>
+  <name>tsid_controllers</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="viviana.morlando@pal-robotics.com">user</maintainer>
-  <license>TODO: License declaration</license>
+  <maintainer email="viviana.morlando@pal-robotics.com">Viviana Morlando</maintainer>
+  <maintainer email="ilenia.perrella@pal-robotics.com">Ilenia Perrella</maintainer>
+
+  <license>Propietary</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>

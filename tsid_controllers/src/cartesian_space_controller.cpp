@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "dynamic_tsid_controller/dynamic_tsid_controller.hpp"
+#include "tsid_controllers/cartesian_space_controller.hpp"
 #include <pluginlib/class_list_macros.hpp>
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -22,24 +22,21 @@
 #include <pinocchio/algorithm/joint-configuration.hpp>
 
 using namespace controller_interface;
-// using hardware_interface::HW_IF_EFFORT;
-// using hardware_interface::HW_IF_POSITION;
-// using hardware_interface::HW_IF_VELOCITY;
 
-namespace dynamic_tsid_controller
+namespace tsid_controllers
 {
 using std::placeholders::_1;
 
-DynamicTsidController::DynamicTsidController()
+CartesianSpaceController::CartesianSpaceController()
 : controller_interface::ControllerInterface(),
   dt_(0, 0)
 {
 }
 
-controller_interface::CallbackReturn DynamicTsidController::on_init()
+controller_interface::CallbackReturn CartesianSpaceController::on_init()
 {
   try {
-    param_listener_ = std::make_shared<dynamic_tsid_controller::ParamListener>(get_node());
+    param_listener_ = std::make_shared<tsid_controllers::ParamListener>(get_node());
 
     if (!param_listener_) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to initialize ParamListener.");
@@ -56,7 +53,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_init()
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn DynamicTsidController::on_configure(
+controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   const rclcpp_lifecycle::State & /*prev_state*/)
 {
   // Check if parameters were taken correctly
@@ -104,7 +101,6 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   //Creating a map between index and joint
   int idx = 0;
 
-
   Interfaces pos_iface = Interfaces::position;
   Interfaces vel_iface = Interfaces::velocity;
   Interfaces eff_iface = Interfaces::effort;
@@ -117,20 +113,18 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
     joint_state_interfaces_[idx].reserve(3);
 
     // Create the state interfaces
-
     state_interface_names_[idx].resize(3);
     state_interface_names_[idx][pos_iface._value] = joint + "/" + pos_iface._to_string();
     state_interface_names_[idx][vel_iface._value] = joint + "/" + vel_iface._to_string();
     state_interface_names_[idx][eff_iface._value] = joint + "/" + eff_iface._to_string();
-
 
     idx++;
   }
   // Pose reference callback
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
-    "dynamic_tsid_controller/pose_cmd", 1,
-    std::bind(&DynamicTsidController::setPoseCallback, this, _1));
+    "cartesian_space_controller/pose_cmd", 1,
+    std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
 
   /* ADDING INITIALIZATION OF PINOCCHIO */
 
@@ -139,17 +133,8 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
 
   RCLCPP_INFO(get_node()->get_logger(), "Model has been built, it has %d joints", model_.njoints);
 
-
-  /*for (size_t i = 0; i < model_.frames.size(); ++i) {
-    const auto & frame = model_.frames[i];
-    std::cout << "Frame " << i << ": " << frame.name
-              << ", type: " << frame.type << std::endl;
-  }*/
-
-
   std::vector<pinocchio::JointIndex> joints_to_lock;
-  /*VMO: In this point we make a list of joints to remove from the model (in tiago case wheel joints and end effector joints)
-   These are actually the joints that we don't passs to the controller*/
+
   for (auto & name : model_.names) {
     if (name != "universe" && name != "root_joint" &&
       std::find(
@@ -266,7 +251,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_configure(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-InterfaceConfiguration DynamicTsidController::state_interface_configuration()
+InterfaceConfiguration CartesianSpaceController::state_interface_configuration()
 const
 {
   std::vector<std::string> state_interfaces_config_names;
@@ -284,7 +269,7 @@ const
 
 
 controller_interface::InterfaceConfiguration
-DynamicTsidController::command_interface_configuration() const
+CartesianSpaceController::command_interface_configuration() const
 {
 
   std::vector<std::string> command_interfaces_config_names;
@@ -301,7 +286,7 @@ DynamicTsidController::command_interface_configuration() const
 }
 
 
-controller_interface::CallbackReturn DynamicTsidController::on_activate(
+controller_interface::CallbackReturn CartesianSpaceController::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // Check if all the command interfaces are in the actuator interface
@@ -343,11 +328,7 @@ controller_interface::CallbackReturn DynamicTsidController::on_activate(
 
   // Setting posture task reference as initial position
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
-  RCLCPP_INFO(get_node()->get_logger(), "Initial position: %f", q0[0]);
-
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
-  RCLCPP_INFO(get_node()->get_logger(), "Initial position: %f", q0[0]);
-
 
   // Setting initial reference for the end effector tasks
   for (auto ee : ee_names_) {
@@ -366,16 +347,15 @@ controller_interface::CallbackReturn DynamicTsidController::on_activate(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn DynamicTsidController::on_deactivate(
+controller_interface::CallbackReturn CartesianSpaceController::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // reset command buffer
-  // TODO: set 0.0 torque to stop it
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 
-controller_interface::return_type DynamicTsidController::update(
+controller_interface::return_type CartesianSpaceController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
 
@@ -401,11 +381,6 @@ controller_interface::return_type DynamicTsidController::update(
   // Solving the problem
   const auto sol = solver_->solve(solverData);
 
-  /*qp_status_ = sol.status;
-  if (sol.status == tsid::solvers::HQP_STATUS_OPTIMAL) {
-    desiredAccelerationPinocchio_ = invdyn_->getAccelerations(sol);
-  }*/
-
   // Integrating acceleration to get velocity
   Eigen::VectorXd a = formulation_->getAccelerations(sol);
   Eigen::VectorXd v_cmd = v + a * 0.5 * dt_.seconds();
@@ -419,16 +394,12 @@ controller_interface::return_type DynamicTsidController::update(
   for (const auto & joint : params_.joint_names) {
     command_interfaces_[jnt_id_[joint]].set_value(
       q_cmd[model_.getJointId(joint) - 2]);
-    RCLCPP_INFO(
-      get_node()->get_logger(), "Joint %s position: %f", joint.c_str(),
-      command_interfaces_[jnt_id_[joint]].get_value());
   }
-
 
   return controller_interface::return_type::OK;
 }
 
-void DynamicTsidController::updateParams()
+void CartesianSpaceController::updateParams()
 {
   if (param_listener_->is_old(params_)) {
     params_ = param_listener_->get_params();
@@ -450,7 +421,7 @@ void DynamicTsidController::updateParams()
 
 }
 
-void DynamicTsidController::setPoseCallback(
+void CartesianSpaceController::setPoseCallback(
   tsid_controller_msgs::msg::EePos::ConstSharedPtr msg)
 {
   if (get_node()->get_current_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
@@ -467,11 +438,6 @@ void DynamicTsidController::setPoseCallback(
           msg->desired_pose[i].position.z;
         auto h_ee_ =
           robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee_names_[i]));
-
-        // Printing info about current position
-        /* RCLCPP_INFO(
-           get_node()->get_logger(), " Current position of ee %s : %f %f %f", ee.c_str(),
-           h_ee_.translation()[0], h_ee_.translation()[1], h_ee_.translation()[2]);*/
 
         // Setting the reference
 
@@ -514,26 +480,6 @@ void DynamicTsidController::setPoseCallback(
 
         publisher_curr_pos->publish(current_pose);
 
-
-        // Computing inverse kinematics To implement?
-
-        /*   Eigen::VectorXd q = Eigen::VectorXd::Zero(robot_wrapper_->nq());
-           q[6] = 1.0;
-
-           for (const auto & joint : params_.joint_names) {
-             q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) -
-               2] = joint_state_interfaces_[jnt_id_[joint]][Interfaces::position].get().get_value();
-           }
-
-           traj_joint_posture_->setReference(q.tail(robot_wrapper_->nq() - 7));
-
-           task_joint_posture_->setReference(traj_joint_posture_->computeNext());*/
-
-
-        /*RCLCPP_INFO(
-          get_node()->get_logger(), " Reference position ee %s : %f %f %f", ee.c_str(),
-          ref_pos[0], ref_pos[1], ref_pos[2]);*/
-
       }
 
 
@@ -543,13 +489,7 @@ void DynamicTsidController::setPoseCallback(
         auto h_ee_ =
           robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee));
 
-        // Printing info about current position
-        /* RCLCPP_INFO(
-           get_node()->get_logger(), " Current position of ee %s : %f %f %f", ee.c_str(),
-           h_ee_.translation()[0], h_ee_.translation()[1], h_ee_.translation()[2]);*/
-
         // Setting the reference
-
         Eigen::Vector3d pos_x_des = h_ee_.translation();
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
         ref.head(3) = pos_x_des;
@@ -575,6 +515,4 @@ void DynamicTsidController::setPoseCallback(
 }  // namespace dynamic_tsid_controller
 #include "pluginlib/class_list_macros.hpp"
 
-PLUGINLIB_EXPORT_CLASS(
-  dynamic_tsid_controller::DynamicTsidController,
-  controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(tsid_controllers::CartesianSpaceController, controller_interface::ControllerInterface)
