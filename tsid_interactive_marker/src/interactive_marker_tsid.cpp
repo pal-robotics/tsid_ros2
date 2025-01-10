@@ -167,11 +167,6 @@ void InteractiveMarkerTsidNode::on_timer()
   transformStamped = tf_buffer_->lookupTransform(
     "base_footprint", "arm_right_7_link",
     tf2::TimePointZero, tf2::durationFromSec(5.0));
-  RCLCPP_INFO(
-    get_logger(), "Right arm position: %f %f %f",
-    transformStamped.transform.translation.x,
-    transformStamped.transform.translation.y,
-    transformStamped.transform.translation.z);
   current_position_right_[0] = transformStamped.transform.translation.x;
   current_position_right_[1] = transformStamped.transform.translation.y;
   current_position_right_[2] = transformStamped.transform.translation.z;
@@ -320,9 +315,6 @@ InteractiveMarkerTsidNode::make6DofMarker(
     int_marker.pose.position.x = current_position_right_[0];
     int_marker.pose.position.y = current_position_right_[1];
     int_marker.pose.position.z = current_position_right_[2];
-    RCLCPP_INFO(
-      get_logger(), "Right arm position: %f %f %f",
-      current_position_right_[0], current_position_right_[1], current_position_right_[2]);
   } else if (frame_name == "arm_head_7_link") {
     int_marker.pose.position.x = current_position_head_[0];
     int_marker.pose.position.y = current_position_head_[1];
