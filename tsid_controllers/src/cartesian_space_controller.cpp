@@ -505,8 +505,11 @@ void CartesianSpaceController::setPoseCallback(
       }
     }
   } else {
-    RCLCPP_WARN(
-      get_node()->get_logger(), "Controller is not active, the command will be ignored");
+    RCLCPP_WARN_THROTTLE(
+            get_node()->get_logger(), 
+            *get_node()->get_clock(), 
+            1000,
+            "Controller is not active, the command will be ignored");
   }
 
 }

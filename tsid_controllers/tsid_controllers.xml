@@ -1,9 +1,5 @@
 <library path="tsid_controllers">
-  <class name="tsid_controllers/CartesianSpaceController"
-         type="tsid_controllers::CartesianSpaceController" 
-         base_class_type="controller_interface::ControllerInterface">
-  <description>
-      Cartesian controller for the whole body of a robot using TSID
-  </description>
+  <class name="tsid_controllers/CartesianSpaceController" type="tsid_controllers::CartesianSpaceController" base_class_type="controller_interface::ControllerInterface">
+    <description>A Cartesian space controller for TSID.</description>
   </class>
 </library>
