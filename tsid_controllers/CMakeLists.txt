@@ -21,6 +21,7 @@ generate_parameter_library(tsid_controllers_params
 
 ament_auto_add_library(tsid_controllers SHARED
   src/cartesian_space_controller.cpp
+  src/joint_space_controller.cpp
 )
 
 target_link_libraries(tsid_controllers
