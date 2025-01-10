@@ -2,11 +2,8 @@
   <class name="tsid_controllers/CartesianSpaceController" type="tsid_controllers::CartesianSpaceController" base_class_type="controller_interface::ControllerInterface">
     <description>A Cartesian space controller for TSID.</description>
   </class>
-  <class name="tsid_controllers/JointSpaceTsidController"
-         type="tsid_controllers::JointSpaceTsidController" 
-         base_class_type="controller_interface::ControllerInterface">
-  <description>
-      Joint space controller for the whole body of a robot using TSID
-  </description>
+  
+  <class name="tsid_controllers/JointSpaceTsidController" type="tsid_controllers::JointSpaceTsidController" base_class_type="controller_interface::ControllerInterface">
+    <description> Joint space controller for the whole body of a robot using TSID </description>
   </class> 
 </library>

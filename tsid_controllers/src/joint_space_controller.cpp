@@ -257,7 +257,6 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // reset command buffer
-  // TODO: set 0.0 torque to stop it
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
