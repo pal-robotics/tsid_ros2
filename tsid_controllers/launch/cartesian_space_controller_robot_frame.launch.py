@@ -33,7 +33,7 @@ def declare_actions(launch_description: LaunchDescription, launch_args: LaunchAr
 
     controller_config = os.path.join(
         pkg_share_directory,
-        'config', 'cartesian_space_params.yaml')
+        'config', 'cartesian_space_params_robot_frame.yaml')
     
     print(controller_config)
     tsid_spawner_node = Node(

@@ -2,6 +2,8 @@ cartesian_space_controller:
   ros__parameters:
     type: tsid_controllers/CartesianSpaceController
     update_rate: 25
+
+    local_frame: false
     
     joint_state_names:
       - arm_right_1_joint
@@ -32,11 +34,12 @@ cartesian_space_controller:
     posture_gain: 1.0
 
     cartesian_gain:
-        arm_right_7_link:
+         arm_right_7_link:
           kp_x: 300.0
           kp_y: 300.0
           kp_z: 1500.0
           kp_roll: 5.0
           kp_pitch: 5.0
           kp_yaw: 5.0
+
 
