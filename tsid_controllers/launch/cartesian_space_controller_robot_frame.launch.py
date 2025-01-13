@@ -51,7 +51,7 @@ def declare_actions(launch_description: LaunchDescription, launch_args: LaunchAr
         output='screen'
     )
 
-    launch_description.add_action(tsid_interactive_node)
+    #launch_description.add_action(tsid_interactive_node)
     
     return
 

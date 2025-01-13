@@ -70,6 +70,100 @@ tsid_controllers:
         default_value: 0.0,
         description: "Joint velocity integral gain",
       }
+      
+  cartesian_vel_gain:
+    __map_ee_names:
+      kp_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position gain in x direction",
+      }
+      kp_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position gain in y direction",
+      }
+      kp_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position gain in z direction",
+      }
+      kp_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation gain in roll direction",
+      }
+      kp_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation gain in pitch direction",
+      }
+      kp_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation gain in yaw direction",
+      }
+      kd_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian velocity damping in x direction",
+      }
+      kd_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian velocity damping in y direction",
+      }
+      kd_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian velocity damping in z direction",
+      }
+      kd_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation damping in roll direction",
+      }
+      kd_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation damping in pitch direction",
+      }
+      kd_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation damping in yaw direction",
+      }
+      ki_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position integral gain in x direction",
+      }
+      ki_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position integral gain in y direction",
+      }
+      ki_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian position integral gain in z direction",
+      }
+      ki_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation integral gain in roll direction",
+      }
+      ki_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation integral gain in pitch direction",
+      }
+      ki_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation integral gain in yaw direction",
+      }
+            
 
   cartesian_gain:
     __map_ee_names:

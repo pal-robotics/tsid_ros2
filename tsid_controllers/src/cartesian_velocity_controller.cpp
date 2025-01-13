@@ -254,13 +254,18 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     task_ee_.push_back(
       new
       tsid::tasks::TaskCartesianVelocity(
-        "task-ee" + ee, *robot_wrapper_, ee));
+        "task-ee" + ee, *robot_wrapper_, ee, dt_.seconds()));
 
-    auto gain = params_.cartesian_gain.ee_names_map.at(ee);
+    auto gain = params_.cartesian_vel_gain.ee_names_map.at(ee);
     Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd ki_gain = Eigen::VectorXd::Zero(6);
     kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch, gain.kp_yaw;
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch, gain.kd_yaw;
+    ki_gain << gain.ki_x, gain.ki_y, gain.ki_z, gain.ki_roll, gain.ki_pitch, gain.ki_yaw;
     task_ee_[ee_id_[ee]]->Kp(kp_gain);
-    task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
+    task_ee_[ee_id_[ee]]->Ki(ki_gain);
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
     task_ee_[ee_id_[ee]]->setMask(ee_mask);

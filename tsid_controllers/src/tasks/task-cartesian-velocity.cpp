@@ -13,11 +13,12 @@ using namespace pinocchio;
 
 TaskCartesianVelocity::TaskCartesianVelocity(
   const std::string & name, RobotWrapper & robot,
-  const std::string & frameName)
+  const std::string & frameName, const double & dt)
 : TaskMotion(name, robot),
   m_frame_name(frameName),
   m_constraint(name, 6, robot.nv()),
   m_ref(6, 6)
+  dt_(dt)
 {
   PINOCCHIO_CHECK_INPUT_ARGUMENT(
     m_robot.model().existFrame(frameName),
@@ -36,6 +37,7 @@ TaskCartesianVelocity::TaskCartesianVelocity(
   m_v_ref_vec.resize(6);
   m_Kp.setZero(6);
   m_Kd.setZero(6);
+  m_Ki.setZero(6);
   m_a_des.setZero(6);
   m_J.setZero(6, robot.nv());
   m_J_rotated.setZero(6, robot.nv());
@@ -66,6 +68,9 @@ const Vector & TaskCartesianVelocity::Kp() const {return m_Kp;}
 
 const Vector & TaskCartesianVelocity::Kd() const {return m_Kd;}
 
+const Vector & TaskCartesianVelocity::Ki() const {return m_Ki;}
+
+
 void TaskCartesianVelocity::Kp(ConstRefVector Kp)
 {
   PINOCCHIO_CHECK_INPUT_ARGUMENT(
@@ -80,6 +85,14 @@ void TaskCartesianVelocity::Kd(ConstRefVector Kd)
     Kd.size() == 6,
     "The size of the Kd vector needs to equal 6");
   m_Kd = Kd;
+}
+
+void TaskCartesianVelocity::Ki(ConstRefVector Ki)
+{
+  PINOCCHIO_CHECK_INPUT_ARGUMENT(
+    Ki.size() == 6,
+    "The size of the Ki vector needs to equal 6");
+  m_Ki = Ki;
 }
 
 void TaskCartesianVelocity::setReference(TrajectorySample & ref)
@@ -166,22 +179,21 @@ const ConstraintBase & TaskCartesianVelocity::compute(
   // Transformation from local to world
   m_wMl.rotation(oMi.rotation());
 
-  // cout<<"m_p_error_vec="<<m_p_error_vec.head<3>().transpose()<<endl;
-  // cout<<"oMi-m_M_ref
-  // ="<<-(oMi.translation()-m_M_ref.translation()).transpose()<<endl;
+
   m_v_error =
     m_v_ref - m_wMl.act(v_frame);      // vel err in local world-oriented frame
 
 
-  m_a_error = (m_v_error - v_err_prev ) / 0.01;    // acc err in local world-oriented frame
+  m_a_error = (m_v_error - v_err_prev ) / dt_;    // acc err in local world-oriented frame
 
-  m_p_error += m_v_error * 0.01;
+  m_p_error += m_v_error * dt_;
 
 
   // desired acc in local world-oriented frame
   m_drift = m_wMl.act(m_drift);
 
-  m_a_des = 250 * m_v_error.toVector() + 0.5 * m_p_error.toVector() + m_a_error.toVector() +
+  m_a_des = m_Kp.cwiseProduct(m_v_error.toVector()) + m_Ki.cwiseProduct(m_p_error.toVector()) +
+    m_Kd.cwiseProduct(m_a_error.toVector()) +
     m_v_ref.toVector() + m_robot.model().gravity.toVector();
 
   // Use an explicit temporary `m_J_rotated` here to avoid allocations.

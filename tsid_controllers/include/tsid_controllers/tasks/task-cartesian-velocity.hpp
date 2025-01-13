@@ -78,8 +78,10 @@ public:
 
   const Vector & Kp() const;
   const Vector & Kd() const;
+  const Vector & Ki() const;
   void Kp(ConstRefVector Kp);
   void Kd(ConstRefVector Kp);
+  void Ki(ConstRefVector Ki);
 
   Index frame_id() const;
 
@@ -104,6 +106,7 @@ protected:
   SE3 m_M_ref, m_wMl, pos_prev;
   Vector m_Kp;
   Vector m_Kd;
+  Vector m_Ki;
   Vector m_a_des, m_a_des_masked;
   Motion m_drift;
   Vector m_drift_masked;
@@ -111,6 +114,7 @@ protected:
   Matrix6x m_J_rotated;
   ConstraintEquality m_constraint;
   TrajectorySample m_ref;
+  double dt_;
 
   bool first = true;
   bool m_local_frame;

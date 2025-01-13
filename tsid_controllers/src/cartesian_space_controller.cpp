@@ -495,12 +495,18 @@ void CartesianSpaceController::setPoseCallback(
           tsid::math::SE3ToVector(se3, ref);
         } else {
           // Taking desired position from the message
-          desired_pose_[ee_id_[ee]] << msg->desired_pose[i].position.x,
+          pinocchio::Motion desired_pose;
+          desired_pose.setZero();
+          desired_pose.linear() << msg->desired_pose[i].position.x,
             msg->desired_pose[i].position.y,
             msg->desired_pose[i].position.z;
 
-          // Setting the reference
+          // Adding displacement to the desired pose
+          desired_pose_[ee_id_[ee]] << h_ee_.translation()[0] + desired_pose.linear()[0],
+            h_ee_.translation()[1] + desired_pose.linear()[1],
+            h_ee_.translation()[2] + desired_pose.linear()[2];
 
+          // Setting the orientation desired
           Eigen::Quaterniond quat(
             msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
             msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
@@ -509,7 +515,6 @@ void CartesianSpaceController::setPoseCallback(
 
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
           tsid::math::SE3ToVector(se3, ref);
-
         }
 
 

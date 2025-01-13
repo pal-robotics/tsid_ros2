@@ -173,8 +173,8 @@ const ConstraintBase & TaskJointVel::compute(
   m_v = v.tail(m_robot.na());
 
   m_v_error = m_ref.getValue() - m_v;
-  m_p_error += m_v_error * 0.01;
-  m_a_error = (m_v_error - v_err_prev ) / 0.01;    // acc err in local world-oriented frame
+  m_p_error += m_v_error * dt_;
+  m_a_error = (m_v_error - v_err_prev ) / dt_;    // acc err in local world-oriented frame
   m_a_des = m_Kp.cwiseProduct(m_v_error) + m_Ki.cwiseProduct(m_p_error) +
     m_Kd.cwiseProduct(m_a_error);
 
