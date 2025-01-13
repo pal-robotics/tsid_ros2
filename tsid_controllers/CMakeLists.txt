@@ -24,6 +24,8 @@ ament_auto_add_library(tsid_controllers SHARED
   src/joint_space_controller.cpp
   src/tasks/task-vel-joint.cpp
   src/joint_space_vel_controller.cpp
+  src/tasks/task-cartesian-velocity.cpp
+  src/cartesian_velocity_controller.cpp
 )
 
 target_link_libraries(tsid_controllers
