@@ -69,13 +69,26 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   if (params_.joint_state_names.empty()) {
     RCLCPP_ERROR(get_node()->get_logger(), "The joints name cannot be empty");
     return controller_interface::CallbackReturn::ERROR;
+  } else {
+    joint_names_ = params_.joint_state_names;
   }
 
+  // Check if command joint names are not empty
+  if (params_.joint_command_names.empty() ) {
+    RCLCPP_INFO(
+      get_node()->get_logger(), "The joint command names is empty. Joint state will be used");
+    joint_command_names_ = params_.joint_state_names;
+  } else {
+    joint_command_names_ = params_.joint_command_names;
+  }
+
+
   // Create the state and command interfaces
-  state_interfaces_.reserve(3 * params_.joint_state_names.size());
-  command_interfaces_.reserve(params_.joint_state_names.size());
-  joint_state_interfaces_.resize(params_.joint_state_names.size());
-  state_interface_names_.resize(params_.joint_state_names.size());
+  state_interfaces_.reserve(3 * joint_names_.size());
+  command_interfaces_.reserve(joint_command_names_.size());
+  joint_state_interfaces_.resize(joint_names_.size());
+  state_interface_names_.resize(joint_names_.size());
+
 
   int idx = 0;
 
@@ -83,7 +96,7 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   Interfaces vel_iface = Interfaces::velocity;
   Interfaces eff_iface = Interfaces::effort;
 
-  for (const auto & joint : params_.joint_state_names) {
+  for (const auto & joint : joint_names_) {
 
     jnt_id_.insert(std::make_pair(joint, idx));
 
@@ -97,6 +110,15 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
 
     idx++;
   }
+
+  idx = 0;
+
+  // Creating a map for command joint
+  for (const auto & joint : joint_command_names_) {
+    jnt_command_id_.insert(std::make_pair(joint, idx));
+    idx++;
+  }
+
   // Position command
 
   joint_cmd_sub_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
@@ -201,7 +223,7 @@ JointSpaceTsidController::command_interface_configuration() const
 {
 
   std::vector<std::string> command_interfaces_config_names;
-  for (const auto & joint : params_.joint_state_names) {
+  for (const auto & joint : joint_command_names_) {
     const auto full_name = joint + "/position";
     command_interfaces_config_names.push_back(full_name);
   }
@@ -300,8 +322,8 @@ controller_interface::return_type JointSpaceTsidController::update(
   auto q_cmd = q_int.tail(model_.nq - 7);
 
   // Setting the command to the joint command interfaces
-  for (const auto & joint : params_.joint_state_names) {
-    command_interfaces_[jnt_id_[joint]].set_value(
+  for (const auto & joint : joint_command_names_) {
+    command_interfaces_[jnt_command_id_[joint]].set_value(
       q_cmd[model_.getJointId(joint) - 2]);
   }
 
