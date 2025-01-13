@@ -10,7 +10,7 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 ament_auto_find_build_dependencies()
-find_package(pinocchio_vendor REQUIRED)
+find_package(pinocchio REQUIRED)
 find_package(tsid_vendor REQUIRED)
 find_package(eiquadprog_vendor REQUIRED)
 
@@ -22,17 +22,19 @@ generate_parameter_library(tsid_controllers_params
 ament_auto_add_library(tsid_controllers SHARED
   src/cartesian_space_controller.cpp
   src/joint_space_controller.cpp
+  src/tasks/task-vel-joint.cpp
+  src/joint_space_vel_controller.cpp
 )
 
 target_link_libraries(tsid_controllers
-                      tsid_controllers_params  
+                      tsid_controllers_params
+                      pinocchio::pinocchio  
                       ${tsid_vendor_LIBRARIES}
-                      ${pinocchio_vendor_LIBRARIES} 
                       ${eiquadprog_vendor_LIBRARIES}
 )
 target_include_directories(tsid_controllers PUBLIC
   ${EIGEN3_INCLUDE_DIR}
-  ${pinocchio_vendor_INCLUDE_DIRS}
+  pinocchio::pinocchio
   ${tsid_vendor_INCLUDE_DIRS}
   ${eiquadprog_vendor_INCLUDE_DIRS}
 )
