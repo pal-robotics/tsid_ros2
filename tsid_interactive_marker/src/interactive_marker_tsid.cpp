@@ -397,7 +397,7 @@ void InteractiveMarkerTsidNode::publish_cmd_()
   for (int i = 0; i < ee_to_update_.size(); i++) {
     message.ee_name[i] = ee_to_update_[i];
     message.desired_pose[i] = desired_pose_[i];
-    message.desired_pose[i].position.z = desired_pose_[i].position.z - 0.14;
+    message.desired_pose[i].position.z = desired_pose_[i].position.z;
   }
 
   publisher_->publish(message);
