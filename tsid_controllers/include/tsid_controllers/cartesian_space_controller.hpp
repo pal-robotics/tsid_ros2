@@ -86,7 +86,10 @@ protected:
 
 private:
   std::map<std::string, int> jnt_id_;
+  std::map<std::string, int> jnt_command_id_;
   std::map<std::string, int> ee_id_;
+  std::vector<std::string> joint_names_;
+  std::vector<std::string> joint_command_names_;
   bool first_update_ = true;
   bool tuning_mode_ = false;
   pinocchio::Model model_;

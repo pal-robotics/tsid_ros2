@@ -1,8 +1,18 @@
 tsid_controllers:
-  joint_names: {
+  joint_state_names: {
     type: string_array,
     default_value: [],
     description: "Specifies joints names.",
+    read_only: true,
+    validation: {
+      unique<>: null,
+    }
+  }
+
+  joint_command_names: {
+    type: string_array,
+    default_value: [],
+    description: "Specifies joints names for command.",
     read_only: true,
     validation: {
       unique<>: null,

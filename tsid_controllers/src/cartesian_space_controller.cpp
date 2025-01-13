@@ -66,9 +66,20 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   params_ = param_listener_->get_params();
 
   // Check if the actuator names are not empty
-  if (params_.joint_names.empty()) {
+  if (params_.joint_state_names.empty()) {
     RCLCPP_ERROR(get_node()->get_logger(), "The joints name cannot be empty");
     return controller_interface::CallbackReturn::ERROR;
+  } else {
+    joint_names_ = params_.joint_state_names;
+  }
+
+  // Check if command joint names are not empty
+  if (params_.joint_command_names.empty() ) {
+    RCLCPP_INFO(
+      get_node()->get_logger(), "The joint command names is empty. Joint state will be used");
+    joint_command_names_ = params_.joint_state_names;
+  } else {
+    joint_command_names_ = params_.joint_command_names;
   }
 
   if (params_.ee_names.empty()) {
@@ -87,10 +98,10 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   }
 
   // Create the state and command interfaces
-  state_interfaces_.reserve(3 * params_.joint_names.size());
-  command_interfaces_.reserve(params_.joint_names.size());
-  joint_state_interfaces_.resize(params_.joint_names.size());
-  state_interface_names_.resize(params_.joint_names.size());
+  state_interfaces_.reserve(3 * joint_names_.size());
+  command_interfaces_.reserve(joint_command_names_.size());
+  joint_state_interfaces_.resize(joint_names_.size());
+  state_interface_names_.resize(joint_names_.size());
 
   // TO REMOVE; creating publisher for current pose ee
   publisher_curr_pos =
@@ -105,7 +116,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   Interfaces vel_iface = Interfaces::velocity;
   Interfaces eff_iface = Interfaces::effort;
 
-  for (const auto & joint : params_.joint_names) {
+  for (const auto & joint : joint_names_) {
 
 
     jnt_id_.insert(std::make_pair(joint, idx));
@@ -120,13 +131,22 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
     idx++;
   }
+
+  idx = 0;
+
+  // Creating a map for command joint
+  for (const auto & joint : joint_command_names_) {
+    jnt_command_id_.insert(std::make_pair(joint, idx));
+    idx++;
+  }
+
   // Pose reference callback
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
     "cartesian_space_controller/pose_cmd", 1,
     std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
 
-  /* ADDING INITIALIZATION OF PINOCCHIO */
+  // Creating model in pinocchio
 
   pinocchio::urdf::buildModelFromXML(
     this->get_robot_description(), pinocchio::JointModelFreeFlyer(), model_);
@@ -138,8 +158,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   for (auto & name : model_.names) {
     if (name != "universe" && name != "root_joint" &&
       std::find(
-        params_.joint_names.begin(), params_.joint_names.end(),
-        name) == params_.joint_names.end())
+        joint_names_.begin(), joint_names_.end(),
+        name) == joint_names_.end())
     {
       joints_to_lock.push_back(model_.getJointId(name));
       RCLCPP_INFO(get_node()->get_logger(), "Lock joint %s: ", name.c_str());
@@ -191,9 +211,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
   tsid::trajectories::TrajectorySample sample_posture = traj_joint_posture_->computeNext();
   task_joint_posture_->setReference(sample_posture);
-  //formulation_ ->addMotionTask(
-  //  * task_joint_posture_, posture_weight, posture_priority,
-  //  transition_time );
+  formulation_->addMotionTask(
+    *task_joint_posture_, posture_weight, posture_priority,
+    transition_time);
 
 
   // Joint Bounds Task
@@ -212,11 +232,6 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   Eigen::VectorXd v_min = -v_scaling * model_.velocityLimit.tail(model_.nv - 6);
   task_joint_bounds_->setVelocityBounds(v_min, v_max);
 
-  for (int i = 0; i < v_min.size(); i++) {
-    RCLCPP_INFO(
-      get_node()->get_logger(), "position: %f", v_max[i]
-    );
-  }
   formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
   // End effector tasks, one for each end effector in the config
@@ -256,7 +271,7 @@ const
 {
   std::vector<std::string> state_interfaces_config_names;
 
-  for (const auto & joint: params_.joint_names) {
+  for (const auto & joint: joint_names_) {
     for (int i = 0; i < 3; i++) {
       state_interfaces_config_names.push_back(state_interface_names_[jnt_id_.at(joint)][i]);
     }
@@ -273,7 +288,7 @@ CartesianSpaceController::command_interface_configuration() const
 {
 
   std::vector<std::string> command_interfaces_config_names;
-  for (const auto & joint : params_.joint_names) {
+  for (const auto & joint : joint_command_names_) {
     const auto full_name = joint + "/position";
     command_interfaces_config_names.push_back(full_name);
   }
@@ -290,7 +305,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // Check if all the command interfaces are in the actuator interface
-  for (const auto & joint : params_.joint_names) {
+  for (const auto & joint : joint_names_) {
     if (
       !controller_interface::get_ordered_interfaces(
         state_interfaces_, state_interface_names_[jnt_id_[joint]],
@@ -305,7 +320,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
     }
   }
 
-  for (const auto & joint : params_.joint_names) {
+  for (const auto & joint : joint_names_) {
     RCLCPP_INFO(
       get_node()->get_logger(), "Joint %s position: %f",
       joint.c_str(), joint_state_interfaces_[jnt_id_[joint]][0].get().get_value());
@@ -314,7 +329,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
   // Taking initial position from the joint state interfaces
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nq());
 
-  for (const auto & joint : params_.joint_names) {
+  for (const auto & joint : joint_names_) {
     q0.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) -
       2] = joint_state_interfaces_[jnt_id_[joint]][0].get().get_value();
   }
@@ -367,7 +382,7 @@ controller_interface::return_type CartesianSpaceController::update(
   q[6] = 1.0;
   Eigen::VectorXd v = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
-  for (const auto & joint : params_.joint_names) {
+  for (const auto & joint : joint_names_) {
     q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) -
       2] = joint_state_interfaces_[jnt_id_[joint]][Interfaces::position].get().get_value();
     v.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) -
@@ -391,8 +406,8 @@ controller_interface::return_type CartesianSpaceController::update(
   auto q_cmd = q_int.tail(model_.nq - 7);
 
   // Setting the command to the joint command interfaces
-  for (const auto & joint : params_.joint_names) {
-    command_interfaces_[jnt_id_[joint]].set_value(
+  for (const auto & joint : joint_command_names_) {
+    command_interfaces_[jnt_command_id_[joint]].set_value(
       q_cmd[model_.getJointId(joint) - 2]);
   }
 
