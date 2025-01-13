@@ -33,6 +33,12 @@ tsid_controllers:
 
   }
 
+  local_frame: {
+    type: bool, 
+    default_value: false,
+    description: "If true, the frame is expressed in the local frame of the end-effector",
+  }
+
   velocity_scaling: {
     type: double,
     default_value: 0.5,

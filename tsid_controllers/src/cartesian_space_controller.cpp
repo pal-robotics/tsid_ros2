@@ -87,6 +87,18 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  local_frame = params_.local_frame;
+
+  if (local_frame) {
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the end effector frame");
+  } else {
+    RCLCPP_INFO(
+      get_node()->get_logger(), "The reference is considered as expressed in the base frame");
+  }
+
+
   // Storing names of desired end effector
   ee_names_.resize(params_.ee_names.size());
   desired_pose_.resize(params_.ee_names.size());
@@ -96,6 +108,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     ee_id_.insert(std::make_pair(params_.ee_names[i], i));
     ee_names_[i] = params_.ee_names[i];
   }
+
 
   // Create the state and command interfaces
   state_interfaces_.reserve(3 * joint_names_.size());
@@ -447,27 +460,54 @@ void CartesianSpaceController::setPoseCallback(
           msg->ee_name[i].c_str());
       } else {
         auto ee = msg->ee_name[i];
-        // Taking desired position from the message
-        desired_pose_[ee_id_[ee]] << msg->desired_pose[i].position.x,
-          msg->desired_pose[i].position.y,
-          msg->desired_pose[i].position.z;
+
         auto h_ee_ =
           robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee_names_[i]));
 
-        // Setting the reference
-
-        Eigen::Quaterniond quat(
-          msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
-          msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
-
-        Eigen::Matrix3d rot = quat.toRotationMatrix();
-
-        pinocchio::SE3 se3(rot, desired_pose_[ee_id_[ee]]);
-
-
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-        tsid::math::SE3ToVector(se3, ref);
-        Eigen::Vector3d pos_x_des = desired_pose_[ee_id_[ee]];
+
+        if (local_frame) {
+          // Taking desired position from the message
+          pinocchio::Motion desired_pose;
+          desired_pose.setZero();
+          desired_pose.linear() << msg->desired_pose[i].position.x,
+            msg->desired_pose[i].position.y,
+            msg->desired_pose[i].position.z;
+          desired_pose = h_ee_.toActionMatrix() * desired_pose.toVector();
+
+          // Adding displacement to the desired pose
+          desired_pose_[ee_id_[ee]] << h_ee_.translation()[0] + desired_pose.linear()[0],
+            h_ee_.translation()[1] + desired_pose.linear()[1],
+            h_ee_.translation()[2] + desired_pose.linear()[2];
+
+          // Setting the orientation desired
+          Eigen::Quaterniond quat(
+            msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
+            msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
+
+          Eigen::Matrix3d rot_des = h_ee_.rotation() * quat.toRotationMatrix();
+
+          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
+          tsid::math::SE3ToVector(se3, ref);
+        } else {
+          // Taking desired position from the message
+          desired_pose_[ee_id_[ee]] << msg->desired_pose[i].position.x,
+            msg->desired_pose[i].position.y,
+            msg->desired_pose[i].position.z;
+
+          // Setting the reference
+
+          Eigen::Quaterniond quat(
+            msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
+            msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
+
+          Eigen::Matrix3d rot_des = quat.toRotationMatrix();
+
+          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
+          tsid::math::SE3ToVector(se3, ref);
+
+        }
+
 
         tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_[ee_id_[ee]].computeNext();
         sample_posture_ee.setValue(ref);
@@ -497,9 +537,9 @@ void CartesianSpaceController::setPoseCallback(
           robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee));
 
         // Setting the reference
-        Eigen::Vector3d pos_x_des = h_ee_.translation();
+        Eigen::Vector3d pos_ = h_ee_.translation();
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-        ref.head(3) = pos_x_des;
+        ref.head(3) = pos_;
         ref.tail(9) << h_ee_.rotation()(0, 0), h_ee_.rotation()(0, 1), h_ee_.rotation()(0, 2),
           h_ee_.rotation()(1, 0), h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
           h_ee_.rotation()(2, 0),
