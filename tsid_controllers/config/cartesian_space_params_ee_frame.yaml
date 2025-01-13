@@ -1,0 +1,47 @@
+cartesian_space_controller:
+  ros__parameters:
+    type: tsid_controllers/CartesianSpaceController
+    update_rate: 25
+
+    local_frame: true
+    
+    joint_state_names:
+      - arm_right_1_joint
+      - arm_right_2_joint
+      - arm_right_3_joint
+      - arm_right_4_joint
+      - arm_right_5_joint
+      - arm_right_6_joint
+      - arm_right_7_joint
+      - torso_lift_joint
+
+    joint_command_names:
+      - arm_right_1_joint
+      - arm_right_2_joint
+      - arm_right_3_joint
+      - arm_right_4_joint
+      - arm_right_5_joint
+      - arm_right_6_joint
+      - arm_right_7_joint
+
+    interface_name: position
+
+    ee_names:
+      - arm_right_7_link
+
+    velocity_scaling: 1.0
+
+    posture_gain: 1.0
+
+    cartesian_gain:
+         arm_right_7_link:
+          kp_x: 300.0
+          kp_y: 300.0
+          kp_z: 1500.0
+          kp_roll: 5.0
+          kp_pitch: 5.0
+          kp_yaw: 5.0
+
+
+
+
