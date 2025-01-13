@@ -258,6 +258,10 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // reset command buffer
+  release_interfaces();
+  for (auto joint : params_.joint_state_names) {
+    joint_state_interfaces_[jnt_id_[joint]].clear();
+  }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
