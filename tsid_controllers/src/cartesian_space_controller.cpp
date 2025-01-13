@@ -441,29 +441,21 @@ void CartesianSpaceController::setPoseCallback(
 
         // Setting the reference
 
-        /*  Eigen::Quaterniond quat(
-            msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
-            msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
+        Eigen::Quaterniond quat(
+          msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
+          msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
 
-          Eigen::Matrix3d rot = quat.toRotationMatrix();
+        Eigen::Matrix3d rot = quat.toRotationMatrix();
 
-          pinocchio::SE3 se3(rot, desired_pose_[ee_id_[ee]]);*/
+        pinocchio::SE3 se3(rot, desired_pose_[ee_id_[ee]]);
 
 
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
-        //  tsid::math::SE3ToVector(se3, ref);
+        tsid::math::SE3ToVector(se3, ref);
         Eigen::Vector3d pos_x_des = desired_pose_[ee_id_[ee]];
-
-        ref.head(3) = pos_x_des;
-
-        ref.tail(9) << h_ee_.rotation()(0, 0), h_ee_.rotation()(0, 1), h_ee_.rotation()(0, 2),
-          h_ee_.rotation()(1, 0), h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
-          h_ee_.rotation()(2, 0),
-          h_ee_.rotation()(2, 1), h_ee_.rotation()(2, 2);
 
         tsid::trajectories::TrajectorySample sample_posture_ee = traj_ee_[ee_id_[ee]].computeNext();
         sample_posture_ee.setValue(ref);
-
         task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
 
         auto ref_ee = task_ee_[ee_id_[ee]]->getReference();
@@ -506,10 +498,10 @@ void CartesianSpaceController::setPoseCallback(
     }
   } else {
     RCLCPP_WARN_THROTTLE(
-            get_node()->get_logger(), 
-            *get_node()->get_clock(), 
-            1000,
-            "Controller is not active, the command will be ignored");
+      get_node()->get_logger(),
+      *get_node()->get_clock(),
+      1000,
+      "Controller is not active, the command will be ignored");
   }
 
 }
@@ -518,4 +510,6 @@ void CartesianSpaceController::setPoseCallback(
 }  // namespace dynamic_tsid_controller
 #include "pluginlib/class_list_macros.hpp"
 
-PLUGINLIB_EXPORT_CLASS(tsid_controllers::CartesianSpaceController, controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(
+  tsid_controllers::CartesianSpaceController,
+  controller_interface::ControllerInterface)
