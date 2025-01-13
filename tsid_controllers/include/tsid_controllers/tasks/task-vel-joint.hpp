@@ -71,12 +71,15 @@ public:
 
   const Vector & Kp();
   const Vector & Kd();
+  const Vector & Ki();
   void Kp(ConstRefVector Kp);
   void Kd(ConstRefVector Kp);
+  void Ki(ConstRefVector Ki);
 
 protected:
   Vector m_Kp;
   Vector m_Kd;
+  Vector m_Ki;
   Vector m_p_error, m_v_error, m_a_error, v_err_prev;
   Vector m_p, m_v;
   Vector m_a_des;

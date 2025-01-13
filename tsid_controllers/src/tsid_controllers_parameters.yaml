@@ -51,6 +51,26 @@ tsid_controllers:
     description: "Gain for the posture task",
   }
 
+  joint_vel_gain: 
+    __map_joint_command_names:
+      kp: {
+        type: double,
+        default_value: 0.0,
+        description: "Joint velocity gain",
+      }
+
+      kd: {
+        type: double,
+        default_value: 0.0,
+        description: "Joint velocity damping",
+      }
+
+      ki: {
+        type: double,
+        default_value: 0.0,
+        description: "Joint velocity integral gain",
+      }
+
   cartesian_gain:
     __map_ee_names:
       kp_x: {

@@ -12,7 +12,47 @@ joint_space_vel_controller:
       - arm_right_6_joint
       - arm_right_7_joint
 
+    joint_command_names:
+      - arm_right_1_joint
+      - arm_right_2_joint
+      - arm_right_3_joint
+      - arm_right_4_joint
+      - arm_right_5_joint
+      - arm_right_6_joint
+      - arm_right_7_joint
+
     interface_name: position
+
+    joint_vel_gain:
+      arm_right_1_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+      arm_right_2_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+      arm_right_3_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+      arm_right_4_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+      arm_right_5_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+      arm_right_6_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+      arm_right_7_joint:
+        kp: 250.0
+        kd: 1.0
+        ki: 0.5
+    
 
     velocity_scaling: 1.0
     posture_gain: 100.0

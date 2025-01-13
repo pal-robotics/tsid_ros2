@@ -116,6 +116,15 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
   for (const auto & joint : joint_command_names_) {
     jnt_command_id_.insert(std::make_pair(joint, idx));
     idx++;
+
+    auto param_gain = params_.joint_vel_gain.joint_command_names_map.at(joint);
+
+    if (param_gain.kp < 0 || param_gain.kd < 0 || param_gain.ki < 0) {
+      RCLCPP_ERROR(
+        get_node()->get_logger(), "The gains must be positive");
+      return controller_interface::CallbackReturn::ERROR;
+    }
+
   }
 
   // Position command
@@ -162,10 +171,21 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
   task_joint_velocity_ = new tsid::tasks::TaskJointVel(
     "task-joint-velocity",
     *robot_wrapper_, dt_.seconds());
-  Eigen::VectorXd kp = params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
-  Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
+  Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd ki = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+
+  for (auto joint : joint_command_names_) {
+    auto gain = params_.joint_vel_gain.joint_command_names_map.at(joint);
+
+    kp[jnt_command_id_[joint]] = gain.kp;
+    kd[jnt_command_id_[joint]] = gain.kd;
+    ki[jnt_command_id_[joint]] = gain.ki;
+  }
+
   task_joint_velocity_->Kp(kp);
   task_joint_velocity_->Kd(kd);
+  task_joint_velocity_->Ki(ki);
   int velocity_priority = 1;  // 0 constraint, 1 cost function
   double transition_time = 0.0;
   double velocity_weight = 1e-3;

@@ -82,6 +82,8 @@ const Vector & TaskJointVel::Kp() {return m_Kp;}
 
 const Vector & TaskJointVel::Kd() {return m_Kd;}
 
+const Vector & TaskJointVel::Ki() {return m_Ki;}
+
 void TaskJointVel::Kp(ConstRefVector Kp)
 {
   PINOCCHIO_CHECK_INPUT_ARGUMENT(
@@ -98,6 +100,15 @@ void TaskJointVel::Kd(ConstRefVector Kd)
     "The size of the Kd vector needs to equal " +
     std::to_string(m_robot.na()));
   m_Kd = Kd;
+}
+
+void TaskJointVel::Ki(ConstRefVector Ki)
+{
+  PINOCCHIO_CHECK_INPUT_ARGUMENT(
+    Ki.size() == m_robot.na(),
+    "The size of the Ki vector needs to equal " +
+    std::to_string(m_robot.na()));
+  m_Ki = Ki;
 }
 
 void TaskJointVel::setReference(const TrajectorySample & ref)
@@ -164,8 +175,8 @@ const ConstraintBase & TaskJointVel::compute(
   m_v_error = m_ref.getValue() - m_v;
   m_p_error += m_v_error * 0.01;
   m_a_error = (m_v_error - v_err_prev ) / 0.01;    // acc err in local world-oriented frame
-  m_a_des = 250 * m_v_error + 0.5 * m_p_error +
-    m_a_error;
+  m_a_des = m_Kp.cwiseProduct(m_v_error) + m_Ki.cwiseProduct(m_p_error) +
+    m_Kd.cwiseProduct(m_a_error);
 
   for (unsigned int i = 0; i < m_activeAxes.size(); i++) {
     m_constraint.vector()(i) = m_a_des(m_activeAxes(i));
