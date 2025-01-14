@@ -38,6 +38,7 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include "std_msgs/msg/float64_multi_array.hpp"
+#include "tsid_controllers/tasks/task-vel-joint.hpp"
 
 
 namespace tsid_controllers
@@ -46,11 +47,11 @@ BETTER_ENUM(
   Interfaces, int, position = 0, velocity = 1, effort = 2);
 
 
-class JointSpaceTsidController
+class JointSpaceVelTsidController
   : public controller_interface::ControllerInterface
 {
 public:
-  JointSpaceTsidController();
+  JointSpaceVelTsidController();
 
 
   controller_interface::CallbackReturn on_init() override;
@@ -70,7 +71,7 @@ public:
   controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state)
   override;
 
-  void setPositionCb(
+  void setVelocityCb(
     std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
 protected:
@@ -94,9 +95,9 @@ private:
   tsid::robots::RobotWrapper * robot_wrapper_;
   tsid::InverseDynamicsFormulationAccForce * formulation_;
   tsid::solvers::SolverHQuadProgFast * solver_;
-  tsid::tasks::TaskJointPosture * task_joint_posture_;
+  tsid::tasks::TaskJointVel * task_joint_velocity_;
   tsid::tasks::TaskJointBounds * task_joint_bounds_;
-  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
+  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_velocity_;
   rclcpp::Duration dt_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr joint_cmd_sub_;
   std::vector<double> desired_pose_;

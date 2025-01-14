@@ -33,7 +33,7 @@ def declare_actions(launch_description: LaunchDescription, launch_args: LaunchAr
 
     controller_config = os.path.join(
         pkg_share_directory,
-        'config', 'cartesian_space_params.yaml')
+        'config', 'cartesian_space_params_ee_frame.yaml')
     
     print(controller_config)
     tsid_spawner_node = Node(
@@ -44,14 +44,7 @@ def declare_actions(launch_description: LaunchDescription, launch_args: LaunchAr
     )
     launch_description.add_action(tsid_spawner_node)
 
-    tsid_interactive_node = Node(   
-        package='tsid_interactive_marker',
-        executable='tsid_interactive_marker',
-        name='tsid_interactive_marker',  
-        output='screen'
-    )
 
-    launch_description.add_action(tsid_interactive_node)
     
     return
 

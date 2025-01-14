@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef JOINT_SPACE_TISD_CONTROLLER_HPP_
-#define JOINT_SPACE_TISD_CONTROLLER_HPP_
+#ifndef DYNAMIC_TISD_CONTROLLER_HPP_
+#define DYNAMIC_TISD_CONTROLLER_HPP_
 
 #include <memory>
 #include <string>
@@ -37,6 +37,10 @@
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
+#include <tsid/trajectories/trajectory-se3.hpp>
+#include "tsid_controllers/tasks/task-cartesian-velocity.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "tsid_controller_msgs/msg/ee_pos.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
 
@@ -46,11 +50,11 @@ BETTER_ENUM(
   Interfaces, int, position = 0, velocity = 1, effort = 2);
 
 
-class JointSpaceTsidController
+class CartesianVelocityController
   : public controller_interface::ControllerInterface
 {
 public:
-  JointSpaceTsidController();
+  CartesianVelocityController();
 
 
   controller_interface::CallbackReturn on_init() override;
@@ -70,7 +74,7 @@ public:
   controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state)
   override;
 
-  void setPositionCb(
+  void setVelCallback(
     std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
 protected:
@@ -85,6 +89,7 @@ protected:
 private:
   std::map<std::string, int> jnt_id_;
   std::map<std::string, int> jnt_command_id_;
+  std::map<std::string, int> ee_id_;
   std::vector<std::string> joint_names_;
   std::vector<std::string> joint_command_names_;
   bool first_update_ = true;
@@ -97,10 +102,18 @@ private:
   tsid::tasks::TaskJointPosture * task_joint_posture_;
   tsid::tasks::TaskJointBounds * task_joint_bounds_;
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
+  std::vector<tsid::tasks::TaskCartesianVelocity *> task_ee_;
+  std::vector<pinocchio::SE3> H_ee_0_;
+  std::vector<tsid::trajectories::TrajectoryEuclidianConstant> traj_ee_;
+  const tsid::trajectories::TrajectorySample sample_posture_ee_;
   rclcpp::Duration dt_;
-  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr joint_cmd_sub_;
-  std::vector<double> desired_pose_;
-  double v_scaling_;
+  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr ee_cmd_sub_;
+  std::vector<Eigen::Vector3d> desired_pose_;
+
+  std::vector<std::string> ee_names_;
+
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos;
+  pinocchio::SE3 pos_prev;
 
 
   void updateParams();
@@ -109,4 +122,4 @@ private:
 };
 }
 
-#endif  // JOINT_SPACE_TISD_CONTROLLER_HPP_
+#endif  // DYNAMIC_TISD_CONTROLLER_HPP_
