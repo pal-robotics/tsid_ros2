@@ -29,7 +29,7 @@ public:
 
   TaskCartesianVelocity(
     const std::string & name, RobotWrapper & robot,
-    const std::string & frameName);
+    const std::string & frameName, const double & dt);
 
   virtual ~TaskCartesianVelocity() {}
 

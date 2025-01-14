@@ -17,7 +17,7 @@ TaskCartesianVelocity::TaskCartesianVelocity(
 : TaskMotion(name, robot),
   m_frame_name(frameName),
   m_constraint(name, 6, robot.nv()),
-  m_ref(6, 6)
+  m_ref(6, 6),
   dt_(dt)
 {
   PINOCCHIO_CHECK_INPUT_ARGUMENT(
