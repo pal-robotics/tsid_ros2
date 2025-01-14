@@ -79,7 +79,13 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
       get_node()->get_logger(), "The joint command names is empty. Joint state will be used");
     joint_command_names_ = params_.joint_state_names;
   } else {
-    joint_command_names_ = params_.joint_command_names;
+    joint_command_names_.resize(params_.joint_command_names.size());
+    for (int i = 0; i < params_.joint_command_names.size(); i++) {
+      size_t start = params_.joint_command_names[i].find("/");
+      auto joint = params_.joint_command_names[i].substr(start + 1);
+      std::cout << "joint" << joint << std::endl;
+      joint_command_names_[i] = joint;
+    }
   }
 
   if (params_.ee_names.empty()) {
@@ -301,7 +307,7 @@ CartesianSpaceController::command_interface_configuration() const
 {
 
   std::vector<std::string> command_interfaces_config_names;
-  for (const auto & joint : joint_command_names_) {
+  for (const auto & joint : params_.joint_command_names) {
     const auto full_name = joint + "/position";
     command_interfaces_config_names.push_back(full_name);
   }

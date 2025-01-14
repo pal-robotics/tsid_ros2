@@ -3,7 +3,7 @@ joint_space_controller:
     type: tsid_controllers/JointSpaceTsidController
     update_rate: 25
     
-    joint_names:
+    joint_state_names:
       - arm_right_1_joint
       - arm_right_2_joint
       - arm_right_3_joint
@@ -12,6 +12,16 @@ joint_space_controller:
       - arm_right_6_joint
       - arm_right_7_joint
 
+    joint_command_names:
+      - safety_controller/arm_right_1_joint
+      - safety_controller/arm_right_2_joint
+      - safety_controller/arm_right_3_joint
+      - safety_controller/arm_right_4_joint
+      - safety_controller/arm_right_5_joint
+      - safety_controller/arm_right_6_joint
+      - safety_controller/arm_right_7_joint
+
+      
     interface_name: position
 
     velocity_scaling: 1.0

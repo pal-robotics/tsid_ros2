@@ -79,7 +79,13 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
       get_node()->get_logger(), "The joint command names is empty. Joint state will be used");
     joint_command_names_ = params_.joint_state_names;
   } else {
-    joint_command_names_ = params_.joint_command_names;
+    joint_command_names_.resize(params_.joint_command_names.size());
+    for (int i = 0; i < params_.joint_command_names.size(); i++) {
+      size_t start = params_.joint_command_names[i].find("/");
+      auto joint = params_.joint_command_names[i].substr(start + 1);
+      std::cout << "joint" << joint << std::endl;
+      joint_command_names_[i] = joint;
+    }
   }
 
 
@@ -193,6 +199,7 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   v_scaling_ = params_.velocity_scaling;
   Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_max;
+
   task_joint_bounds_->setVelocityBounds(v_min, v_max);
   formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
@@ -223,7 +230,7 @@ JointSpaceTsidController::command_interface_configuration() const
 {
 
   std::vector<std::string> command_interfaces_config_names;
-  for (const auto & joint : joint_command_names_) {
+  for (const auto & joint : params_.joint_command_names) {
     const auto full_name = joint + "/position";
     command_interfaces_config_names.push_back(full_name);
   }
@@ -352,6 +359,21 @@ void JointSpaceTsidController::setPositionCb(
   if (msg->data.size() != params_.joint_state_names.size()) {
     RCLCPP_ERROR(get_node()->get_logger(), "Received joint position command with incorrect size");
     return;
+  }
+
+  auto upper_limits = model_.upperPositionLimit.tail(model_.nv - 6);
+  auto lower_limits = model_.lowerPositionLimit.tail(model_.nv - 6);
+
+  for (auto joint : joint_command_names_) {
+
+    if (msg->data[jnt_command_id_[joint]] > upper_limits[model_.getJointId(joint) - 2] ||
+      msg->data[jnt_command_id_[joint]] < lower_limits[model_.getJointId(joint) - 2])
+    {
+      RCLCPP_ERROR(
+        get_node()->get_logger(), "Joint %s command out of boundaries! The motion will not be performed!",
+        joint.c_str());
+      return;
+    }
   }
 
   // Setting the reference
