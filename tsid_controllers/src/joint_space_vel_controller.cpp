@@ -82,9 +82,14 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
     joint_command_names_.resize(params_.joint_command_names.size());
     for (int i = 0; i < params_.joint_command_names.size(); i++) {
       size_t start = params_.joint_command_names[i].find("/");
-      auto joint = params_.joint_command_names[i].substr(start + 1);
-      std::cout << "joint" << joint << std::endl;
-      joint_command_names_[i] = joint;
+      if (start != std::string::npos) {
+        auto joint = params_.joint_command_names[i].substr(start + 1);
+        joint_command_names_[i] = joint;
+
+      } else {
+        joint_command_names_[i] = params_.joint_command_names[i];
+
+      }
     }
   }
 

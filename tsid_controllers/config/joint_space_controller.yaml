@@ -13,15 +13,15 @@ joint_space_controller:
       - arm_right_7_joint
 
     joint_command_names:
-      - safety_controller/arm_right_1_joint
-      - safety_controller/arm_right_2_joint
-      - safety_controller/arm_right_3_joint
-      - safety_controller/arm_right_4_joint
-      - safety_controller/arm_right_5_joint
-      - safety_controller/arm_right_6_joint
-      - safety_controller/arm_right_7_joint
+      - arm_right_1_joint
+      - arm_right_2_joint
+      - arm_right_3_joint
+      - arm_right_4_joint
+      - arm_right_5_joint
+      - arm_right_6_joint
+      - arm_right_7_joint
 
-      
+
     interface_name: position
 
     velocity_scaling: 1.0
