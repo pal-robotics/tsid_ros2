@@ -439,6 +439,21 @@ controller_interface::return_type CartesianSpaceController::update(
       q_cmd[model_.getJointId(joint) - 2]);
   }
 
+  auto h_ee_ =
+    robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee_names_[0]));
+
+  geometry_msgs::msg::Pose current_pose;
+  current_pose.position.x = h_ee_.translation()[0];
+  current_pose.position.y = h_ee_.translation()[1];
+  current_pose.position.z = h_ee_.translation()[2];
+  current_pose.orientation.x = 0;
+  current_pose.orientation.y = 0;
+  current_pose.orientation.z = 0;
+  current_pose.orientation.w = 1;
+
+  publisher_curr_pos->publish(current_pose);
+
+
   return controller_interface::return_type::OK;
 }
 
@@ -518,12 +533,14 @@ void CartesianSpaceController::setPoseCallback(
             h_ee_.translation()[1] + desired_pose.linear()[1],
             h_ee_.translation()[2] + desired_pose.linear()[2];
 
+
           // Setting the orientation desired
           Eigen::Quaterniond quat(
             msg->desired_pose[i].orientation.w, msg->desired_pose[i].orientation.x,
             msg->desired_pose[i].orientation.y, msg->desired_pose[i].orientation.z);
 
-          Eigen::Matrix3d rot_des = h_ee_.rotation() * quat.toRotationMatrix();
+
+          Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
 
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
           tsid::math::SE3ToVector(se3, ref);
