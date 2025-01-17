@@ -128,7 +128,7 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
     jnt_command_id_.insert(std::make_pair(joint, idx));
     idx++;
 
-    auto param_gain = params_.joint_vel_gain.joint_command_names_map.at(joint);
+    auto param_gain = params_.joint_vel_gain.joint_state_names_map.at(joint);
 
     if (param_gain.kp < 0 || param_gain.kd < 0 || param_gain.ki < 0) {
       RCLCPP_ERROR(
@@ -187,7 +187,7 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
   Eigen::VectorXd ki = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
 
   for (auto joint : joint_command_names_) {
-    auto gain = params_.joint_vel_gain.joint_command_names_map.at(joint);
+    auto gain = params_.joint_vel_gain.joint_state_names_map.at(joint);
 
     kp[jnt_command_id_[joint]] = gain.kp;
     kd[jnt_command_id_[joint]] = gain.kd;
@@ -382,15 +382,15 @@ void JointSpaceVelTsidController::updateParams()
 void JointSpaceVelTsidController::setVelocityCb(
   std_msgs::msg::Float64MultiArray::ConstSharedPtr msg)
 {
-  if (msg->data.size() != params_.joint_state_names.size()) {
+  if (msg->data.size() != params_.joint_command_names.size()) {
     RCLCPP_ERROR(get_node()->get_logger(), "Received joint velocity command with incorrect size");
     return;
   }
 
   // Setting the reference
-  Eigen::VectorXd ref(params_.joint_state_names.size());
+  Eigen::VectorXd ref(params_.joint_command_names.size());
 
-  for (size_t i = 0; i < params_.joint_state_names.size(); i++) {
+  for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
     ref[i] = msg->data[i];
   }
 

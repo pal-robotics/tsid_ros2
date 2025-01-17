@@ -1,8 +1,9 @@
 cartesian_space_controller:
   ros__parameters:
     type: tsid_controllers/CartesianSpaceController
-
+    update_rate: 25
     local_frame: true
+    is_async: True
     
     joint_state_names:
       - arm_right_1_joint
@@ -15,13 +16,13 @@ cartesian_space_controller:
       - torso_lift_joint
 
     joint_command_names:
-      - arm_right_1_joint
-      - arm_right_2_joint
-      - arm_right_3_joint
-      - arm_right_4_joint
-      - arm_right_5_joint
-      - arm_right_6_joint
-      - arm_right_7_joint
+      - safety_controller/arm_right_1_joint
+      - safety_controller/arm_right_2_joint
+      - safety_controller/arm_right_3_joint
+      - safety_controller/arm_right_4_joint
+      - safety_controller/arm_right_5_joint
+      - safety_controller/arm_right_6_joint
+      - safety_controller/arm_right_7_joint
 
     interface_name: position
 
@@ -34,12 +35,12 @@ cartesian_space_controller:
 
     cartesian_gain:
          arm_right_7_link:
-          kp_x: 1500.0
-          kp_y: 1500.0
-          kp_z: 1500.0
-          kp_roll: 500.0
-          kp_pitch: 500.0
-          kp_yaw: 500.0
+          kp_x: 500.0
+          kp_y: 500.0
+          kp_z: 1000.0
+          kp_roll: 70.0
+          kp_pitch: 70.0
+          kp_yaw: 70.0
 
 
 

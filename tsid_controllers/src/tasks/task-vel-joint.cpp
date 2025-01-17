@@ -178,6 +178,7 @@ const ConstraintBase & TaskJointVel::compute(
   m_a_des = m_Kp.cwiseProduct(m_v_error) + m_Ki.cwiseProduct(m_p_error) +
     m_Kd.cwiseProduct(m_a_error);
 
+
   for (unsigned int i = 0; i < m_activeAxes.size(); i++) {
     m_constraint.vector()(i) = m_a_des(m_activeAxes(i));
   }

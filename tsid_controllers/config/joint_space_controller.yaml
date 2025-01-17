@@ -24,6 +24,7 @@ joint_space_controller:
 
     interface_name: position
 
-    velocity_scaling: 1.0
-    posture_gain: 100.0
+    velocity_scaling: 0.5
+    posture_gain: 1.0
+
     

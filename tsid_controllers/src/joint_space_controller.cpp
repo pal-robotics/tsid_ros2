@@ -202,6 +202,7 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   double bounds_weight = 1;
   // Joint velocity bounds
   v_scaling_ = params_.velocity_scaling;
+
   Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_max;
 
@@ -361,7 +362,7 @@ void JointSpaceTsidController::updateParams()
 void JointSpaceTsidController::setPositionCb(
   std_msgs::msg::Float64MultiArray::ConstSharedPtr msg)
 {
-  if (msg->data.size() != params_.joint_state_names.size()) {
+  if (msg->data.size() != params_.joint_command_names.size()) {
     RCLCPP_ERROR(get_node()->get_logger(), "Received joint position command with incorrect size");
     return;
   }
@@ -382,9 +383,9 @@ void JointSpaceTsidController::setPositionCb(
   }
 
   // Setting the reference
-  Eigen::VectorXd ref(params_.joint_state_names.size());
+  Eigen::VectorXd ref(params_.joint_command_names.size());
 
-  for (size_t i = 0; i < params_.joint_state_names.size(); i++) {
+  for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
     ref[i] = msg->data[i];
   }
 
@@ -396,8 +397,8 @@ void JointSpaceTsidController::setPositionCb(
   auto get_ref = task_joint_posture_->getReference();
   auto ref_pos = get_ref.getValue();
   RCLCPP_INFO(
-    get_node()->get_logger(), " Reference position joints : %f %f %f",
-    ref_pos[0], ref_pos[1], ref_pos[2]);
+    get_node()->get_logger(), " Reference position joints : %f ",
+    ref_pos[0]);
 
 
 }
