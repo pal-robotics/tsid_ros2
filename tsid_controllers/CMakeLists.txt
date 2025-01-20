@@ -12,7 +12,6 @@ find_package(Eigen3 REQUIRED)
 ament_auto_find_build_dependencies()
 find_package(pinocchio REQUIRED)
 find_package(tsid_vendor REQUIRED)
-find_package(eiquadprog_vendor REQUIRED)
 
 
 generate_parameter_library(tsid_controllers_params
@@ -32,13 +31,11 @@ target_link_libraries(tsid_controllers
                       tsid_controllers_params
                       pinocchio::pinocchio  
                       ${tsid_vendor_LIBRARIES}
-                      ${eiquadprog_vendor_LIBRARIES}
 )
 target_include_directories(tsid_controllers PUBLIC
   ${EIGEN3_INCLUDE_DIR}
   pinocchio::pinocchio
   ${tsid_vendor_INCLUDE_DIRS}
-  ${eiquadprog_vendor_INCLUDE_DIRS}
 )
 
 

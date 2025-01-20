@@ -21,7 +21,6 @@
   <depend>generate_parameter_library</depend>
   <depend>pinocchio</depend>
   <depend>tsid_vendor</depend>
-  <depend>eiquadprog_vendor</depend>
 
   <depend>tsid_controller_msgs</depend>
   <depend>tsid_interactive_marker</depend>
