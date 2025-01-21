@@ -38,16 +38,14 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include "std_msgs/msg/float64_multi_array.hpp"
+#include "tsid_controllers/tsid_position_control.hpp"
 
 
 namespace tsid_controllers
 {
-BETTER_ENUM(
-  Interfaces, int, position = 0, velocity = 1, effort = 2);
-
 
 class JointSpaceTsidController
-  : public controller_interface::ControllerInterface
+  : public TsidPositionControl
 {
 public:
   JointSpaceTsidController();
@@ -57,17 +55,11 @@ public:
   controller_interface::CallbackReturn on_configure(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  controller_interface::InterfaceConfiguration command_interface_configuration() const override;
-  controller_interface::InterfaceConfiguration state_interface_configuration() const override;
-
   controller_interface::return_type update(
     const rclcpp::Time & time,
     const rclcpp::Duration & period) override;
 
   controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state)
-  override;
-
-  controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state)
   override;
 
   void setPositionCb(
@@ -78,15 +70,8 @@ protected:
   std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
   std::vector<std::vector<std::string>> state_interface_names_;
 
-  template<typename T>
-  using InterfaceReferences = std::vector<std::vector<std::reference_wrapper<T>>>;
-  InterfaceReferences<hardware_interface::LoanedStateInterface> joint_state_interfaces_;
-
 private:
-  std::map<std::string, int> jnt_id_;
-  std::map<std::string, int> jnt_command_id_;
-  std::vector<std::string> joint_names_;
-  std::vector<std::string> joint_command_names_;
+
   bool first_update_ = true;
   bool tuning_mode_ = false;
   pinocchio::Model model_;
