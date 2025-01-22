@@ -19,13 +19,13 @@ generate_parameter_library(tsid_controllers_params
 )
 
 ament_auto_add_library(tsid_controllers SHARED
+  src/tsid_position_control.cpp
   src/cartesian_space_controller.cpp
   src/joint_space_controller.cpp
   src/tasks/task-vel-joint.cpp
   src/joint_space_vel_controller.cpp
   src/tasks/task-cartesian-velocity.cpp
   src/cartesian_velocity_controller.cpp
-  src/tsid_position_control.cpp
 )
 
 target_link_libraries(tsid_controllers

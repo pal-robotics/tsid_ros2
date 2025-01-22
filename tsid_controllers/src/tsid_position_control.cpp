@@ -239,7 +239,10 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nq());
   Eigen::VectorXd v0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
-  getActualState(q0, v0);
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+
+  q0 = state.first;
+  v0 = state.second;
 
   formulation_->computeProblemData(0.0, q0, v0);
 
@@ -261,16 +264,20 @@ controller_interface::CallbackReturn TsidPositionControl::on_deactivate(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void TsidPositionControl::getActualState( Eigen::VectorXd &q,  Eigen::VectorXd &v){
+std::pair<Eigen::VectorXd, Eigen::VectorXd> TsidPositionControl::getActualState() const {
+  Eigen::VectorXd q = Eigen::VectorXd::Zero(robot_wrapper_->nq());
+  Eigen::VectorXd v = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
-  for (const auto & joint : joint_names_) {
-    q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) -
-      2] = joint_state_interfaces_[jnt_id_[joint]][Interfaces::position].get().get_value();
-    v.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) -
-      2] = joint_state_interfaces_[jnt_id_[joint]][Interfaces::velocity].get().get_value();
-
+  for (const auto &joint : joint_names_) {
+    q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2] =
+        joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::position].get().get_value();
+    v.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) - 2] =
+        joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::velocity].get().get_value();
   }
+
+  return std::make_pair(q, v);
 }
+
 
 void TsidPositionControl::updateParams()
 {
@@ -280,8 +287,7 @@ void TsidPositionControl::updateParams()
     
     v_scaling_ = params_.velocity_scaling;
     Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
-    Eigen::VectorXd v_min = -v_max;
-    task_joint_bounds_->setVelocityBounds(v_min, v_max);
+    task_joint_bounds_->setVelocityBounds(v_max);
     task_joint_posture_->Kp(params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6));
     task_joint_posture_->Kd(2.0 * task_joint_posture_->Kp().cwiseSqrt());
   }
@@ -310,16 +316,28 @@ void TsidPositionControl::DefaultPositionTasks(){
     formulation_->addMotionTask(
         *task_joint_posture_, posture_weight, posture_priority,
         transition_time);
-    
-     // Joint velocity bounds
-    double v_scaling = params_.velocity_scaling;
-    Eigen::VectorXd v_max = v_scaling * model_.velocityLimit.tail(model_.nv - 6);
-    Eigen::VectorXd v_min = -v_max;
-    task_joint_bounds_->setVelocityBounds(v_min, v_max);
+
+  // Joint Bounds Task
+    task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
+      "task-joint-bounds",
+      *robot_wrapper_, dt_.seconds(), true);
+    Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
+    Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
+
+    for (int i = 0; i < q_max.size(); i++) {
+      std::cout << "q_max" << q_max[i] << std::endl;
+      std::cout << "q_min" << q_min[i] << std::endl;
+    }
+
+    task_joint_bounds_->setPositionBounds(q_min, q_max);
 
     int bounds_priority = 0;  // 0 constraint, 1 cost function
     double bounds_weight = 1;
-
+    // Joint velocity bounds
+    v_scaling_ = params_.velocity_scaling;
+    Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
+    Eigen::VectorXd v_min = -v_max;
+    task_joint_bounds_->setVelocityBounds(v_max);
     formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
 }

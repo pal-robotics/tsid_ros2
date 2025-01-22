@@ -28,7 +28,7 @@ namespace tsid_controllers
 using std::placeholders::_1;
 
 JointSpaceTsidController::JointSpaceTsidController()
-: TsidPositionControl(),
+: tsid_controllers::TsidPositionControl(),
   dt_(0, 0)
 {
 }
@@ -59,14 +59,10 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_activate(
 controller_interface::return_type JointSpaceTsidController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  updateParams();
-  Eigen::VectorXd q = Eigen::VectorXd::Zero(robot_wrapper_->nq());
-  Eigen::VectorXd v = Eigen::VectorXd::Zero(robot_wrapper_->nv());
-  getActualState(q,v);
-  q[6] = 1.0;
-
-  compute_problem_and_set_command(q,v);
-
+  TsidPositionControl::updateParams();
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+  state.first[6] = 1.0;
+  compute_problem_and_set_command(state.first,state.second); //q and v
   return controller_interface::return_type::OK;
 }
 
@@ -80,6 +76,4 @@ void JointSpaceTsidController::setPositionCb(
 }  // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
 
-PLUGINLIB_EXPORT_CLASS(
-  tsid_controllers::JointSpaceTsidController,
-  tsid_controllers::TsidPositionControl)
+PLUGINLIB_EXPORT_CLASS(tsid_controllers::JointSpaceTsidController, controller_interface::ControllerInterface)

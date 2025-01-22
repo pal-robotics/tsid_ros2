@@ -39,7 +39,6 @@
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include "geometry_msgs/msg/pose.hpp"
-#include "tsid_controller_msgs/msg/ee_pos.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 
 namespace tsid_controllers
@@ -63,7 +62,7 @@ public:
 
   controller_interface::return_type update(
     const rclcpp::Time & time,
-    const rclcpp::Duration & period) override;
+    const rclcpp::Duration & period) override {return controller_interface::return_type::OK;};
 
   controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state)
   override;
@@ -73,7 +72,7 @@ public:
 
   void DefaultPositionTasks();
   void updateParams();
-  void getActualState(Eigen::VectorXd & q, Eigen::VectorXd & v);
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
 
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
   void setDesiredRef(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
@@ -99,7 +98,7 @@ private:
     tsid::InverseDynamicsFormulationAccForce * formulation_;
     tsid::tasks::TaskJointPosture * task_joint_posture_;
     tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
-    tsid::tasks::TaskJointBounds * task_joint_bounds_;
+    tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
     tsid::solvers::SolverHQuadProgFast * solver_;
     double v_scaling_;
 //   bool first_update_ = true;
