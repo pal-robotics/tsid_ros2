@@ -173,7 +173,7 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
 
   DefaultPositionTasks();
-
+  
   // Initializing solver
   solver_ = new tsid::solvers::SolverHQuadProgFast("qp solver");
 
@@ -278,7 +278,6 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> TsidPositionControl::getActualState(
   return std::make_pair(q, v);
 }
 
-
 void TsidPositionControl::updateParams()
 {
   if (param_listener_->is_old(params_)) {
@@ -341,46 +340,7 @@ void TsidPositionControl::DefaultPositionTasks(){
     formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
 }
-void TsidPositionControl::setDesiredRef(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg){
-  if (msg->data.size() != params_.joint_command_names.size()) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received joint position command with incorrect size");
-    return;
-  }
 
-  auto upper_limits = model_.upperPositionLimit.tail(model_.nv - 6);
-  auto lower_limits = model_.lowerPositionLimit.tail(model_.nv - 6);
-
-  for (auto joint : joint_command_names_) {
-
-    if (msg->data[jnt_command_id_[joint]] > upper_limits[model_.getJointId(joint) - 2] ||
-      msg->data[jnt_command_id_[joint]] < lower_limits[model_.getJointId(joint) - 2])
-    {
-      RCLCPP_ERROR(
-        get_node()->get_logger(), "Joint %s command out of boundaries! The motion will not be performed!",
-        joint.c_str());
-      return;
-    }
-  }
-
-  // Setting the reference
-  Eigen::VectorXd ref(params_.joint_command_names.size());
-
-  for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
-    ref[i] = msg->data[i];
-  }
-
-  tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
-  sample_posture_joint.setValue(ref);
-
-  task_joint_posture_->setReference(sample_posture_joint);
-
-  auto get_ref = task_joint_posture_->getReference();
-  auto ref_pos = get_ref.getValue();
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Reference position joints : %f ",
-    ref_pos[0]);
-
-}
 void TsidPositionControl::compute_problem_and_set_command(const Eigen::VectorXd q, const Eigen::VectorXd v){
   
   // Computing the problem data

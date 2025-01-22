@@ -75,7 +75,6 @@ public:
   std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
 
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
-  void setDesiredRef(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
 protected:
   template<typename T>
@@ -84,45 +83,23 @@ protected:
   tsid_controllers::Params params_;
   std::vector<std::vector<std::string>> state_interface_names_;
   std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
+  tsid::robots::RobotWrapper * robot_wrapper_;
+  tsid::InverseDynamicsFormulationAccForce * formulation_;
+  std::vector<std::string> joint_names_;
+  pinocchio::Model model_;
+  double v_scaling_;
+  std::vector<std::string> joint_command_names_;
+  std::map<std::string, int> jnt_id_;
+  std::map<std::string, int> jnt_command_id_;
+  tsid::tasks::TaskJointPosture * task_joint_posture_;
 
 private: 
-    std::vector<std::string> joint_names_;
-    std::vector<std::string> joint_command_names_;
-    bool local_frame = false;
     rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
-    std::map<std::string, int> jnt_id_;
-    std::map<std::string, int> jnt_command_id_;
-    pinocchio::Model model_;
+
     rclcpp::Duration dt_;
-    tsid::robots::RobotWrapper * robot_wrapper_;
-    tsid::InverseDynamicsFormulationAccForce * formulation_;
-    tsid::tasks::TaskJointPosture * task_joint_posture_;
     tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
     tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
     tsid::solvers::SolverHQuadProgFast * solver_;
-    double v_scaling_;
-//   bool first_update_ = true;
-//   bool tuning_mode_ = false;
-//   
-//   pinocchio::Data data_;
-//   
-//  
-//   
-//   
-//   
-//   std::vector<tsid::tasks::TaskSE3Equality *> task_ee_;
-//   std::vector<tsid::trajectories::TrajectorySE3Constant> traj_ee_;
-//   const tsid::trajectories::TrajectorySample sample_posture_ee_;
-//   
-
-//   
-
- 
-
-
-
-//   
-
 
 };
 }
