@@ -40,7 +40,7 @@
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include "geometry_msgs/msg/pose.hpp"
 #include "tsid_controller_msgs/msg/ee_pos.hpp"
-
+#include "std_msgs/msg/float64_multi_array.hpp"
 
 namespace tsid_controllers
 {

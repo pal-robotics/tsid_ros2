@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tsid_controllers/cartesian_space_controller.hpp"
+#include "tsid_controllers/tsid_position_control.hpp"
 #include <pluginlib/class_list_macros.hpp>
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -210,7 +210,7 @@ TsidPositionControl::command_interface_configuration() const
     controller_interface::interface_configuration_type::INDIVIDUAL,
     command_interfaces_config_names};
 }
-controller_interface::CallbackReturn CartesianSpaceController::on_activate(
+controller_interface::CallbackReturn TsidPositionControl::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   // Check if all the command interfaces are in the actuator interface
@@ -261,71 +261,6 @@ controller_interface::CallbackReturn TsidPositionControl::on_deactivate(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void compute_problem_and_set_command(const Eigen::VectorXd q, const Eigen::VectorXd v){
-  // Computing the problem data
-  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q, v);
-
-  // Solving the problem
-  const auto sol = solver_->solve(solverData);
-
-  // Integrating acceleration to get velocity
-  Eigen::VectorXd a = formulation_->getAccelerations(sol);
-  Eigen::VectorXd v_cmd = v + a * 0.5 * dt_.seconds();
-
-  // Integrating velocity to get position
-  auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
-
-  auto q_cmd = q_int.tail(model_.nq - 7);
-
-  // Setting the command to the joint command interfaces
-  for (const auto & joint : joint_command_names_) {
-    command_interfaces_[jnt_command_id_[joint]].set_value(
-      q_cmd[model_.getJointId(joint) - 2]);
-  }
-
-}
-
-void setDesiredRef(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg){
-  if (msg->data.size() != params_.joint_command_names.size()) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received joint position command with incorrect size");
-    return;
-  }
-
-  auto upper_limits = model_.upperPositionLimit.tail(model_.nv - 6);
-  auto lower_limits = model_.lowerPositionLimit.tail(model_.nv - 6);
-
-  for (auto joint : joint_command_names_) {
-
-    if (msg->data[jnt_command_id_[joint]] > upper_limits[model_.getJointId(joint) - 2] ||
-      msg->data[jnt_command_id_[joint]] < lower_limits[model_.getJointId(joint) - 2])
-    {
-      RCLCPP_ERROR(
-        get_node()->get_logger(), "Joint %s command out of boundaries! The motion will not be performed!",
-        joint.c_str());
-      return;
-    }
-  }
-
-  // Setting the reference
-  Eigen::VectorXd ref(params_.joint_command_names.size());
-
-  for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
-    ref[i] = msg->data[i];
-  }
-
-  tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
-  sample_posture_joint.setValue(ref);
-
-  task_joint_posture_->setReference(sample_posture_joint);
-
-  auto get_ref = task_joint_posture_->getReference();
-  auto ref_pos = get_ref.getValue();
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Reference position joints : %f ",
-    ref_pos[0]);
-
-}
-
 void TsidPositionControl::getActualState( Eigen::VectorXd &q,  Eigen::VectorXd &v){
 
   for (const auto & joint : joint_names_) {
@@ -336,6 +271,7 @@ void TsidPositionControl::getActualState( Eigen::VectorXd &q,  Eigen::VectorXd &
 
   }
 }
+
 void TsidPositionControl::updateParams()
 {
   if (param_listener_->is_old(params_)) {
@@ -381,7 +317,74 @@ void TsidPositionControl::DefaultPositionTasks(){
     Eigen::VectorXd v_min = -v_max;
     task_joint_bounds_->setVelocityBounds(v_min, v_max);
 
+    int bounds_priority = 0;  // 0 constraint, 1 cost function
+    double bounds_weight = 1;
+
     formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
+
+}
+void TsidPositionControl::setDesiredRef(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg){
+  if (msg->data.size() != params_.joint_command_names.size()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Received joint position command with incorrect size");
+    return;
+  }
+
+  auto upper_limits = model_.upperPositionLimit.tail(model_.nv - 6);
+  auto lower_limits = model_.lowerPositionLimit.tail(model_.nv - 6);
+
+  for (auto joint : joint_command_names_) {
+
+    if (msg->data[jnt_command_id_[joint]] > upper_limits[model_.getJointId(joint) - 2] ||
+      msg->data[jnt_command_id_[joint]] < lower_limits[model_.getJointId(joint) - 2])
+    {
+      RCLCPP_ERROR(
+        get_node()->get_logger(), "Joint %s command out of boundaries! The motion will not be performed!",
+        joint.c_str());
+      return;
+    }
+  }
+
+  // Setting the reference
+  Eigen::VectorXd ref(params_.joint_command_names.size());
+
+  for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
+    ref[i] = msg->data[i];
+  }
+
+  tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
+  sample_posture_joint.setValue(ref);
+
+  task_joint_posture_->setReference(sample_posture_joint);
+
+  auto get_ref = task_joint_posture_->getReference();
+  auto ref_pos = get_ref.getValue();
+  RCLCPP_INFO(
+    get_node()->get_logger(), " Reference position joints : %f ",
+    ref_pos[0]);
+
+}
+void TsidPositionControl::compute_problem_and_set_command(const Eigen::VectorXd q, const Eigen::VectorXd v){
+  
+  // Computing the problem data
+  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q, v);
+
+  // Solving the problem
+  const auto sol = solver_->solve(solverData);
+
+  // Integrating acceleration to get velocity
+  Eigen::VectorXd a = formulation_->getAccelerations(sol);
+  Eigen::VectorXd v_cmd = v + a * 0.5 * dt_.seconds();
+
+  // Integrating velocity to get position
+  auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
+
+  auto q_cmd = q_int.tail(model_.nq - 7);
+
+  // Setting the command to the joint command interfaces
+  for (const auto & joint : joint_command_names_) {
+    command_interfaces_[jnt_command_id_[joint]].set_value(
+      q_cmd[model_.getJointId(joint) - 2]);
+  }
 
 }
 
