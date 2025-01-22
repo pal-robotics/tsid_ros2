@@ -21,25 +21,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <controller_interface/controller_interface.hpp>
-#include <hardware_interface/actuator_interface.hpp>
-#include "hardware_interface/component_parser.hpp"
-#include "pal_utils/better_enums.hpp"
 #include <tsid_controllers_params.hpp>
-#include <pinocchio/fwd.hpp>
-#include <pinocchio/multibody/model.hpp>
-#include <pinocchio/multibody/data.hpp>
-#include <tsid/robots/robot-wrapper.hpp>
-#include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
-#include <tsid/solvers/solver-HQP-eiquadprog.hpp>
-#include <tsid/solvers/solver-HQP-eiquadprog-rt.hpp>
-#include <tsid/solvers/solver-HQP-eiquadprog-fast.hpp>
-#include <tsid/tasks/task-joint-posture.hpp>
-#include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
-#include <tsid/tasks/task-joint-bounds.hpp>
-#include <tsid/trajectories/trajectory-euclidian.hpp>
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "tsid_controllers/tsid_position_control.hpp"
-
 
 namespace tsid_controllers
 {
@@ -49,7 +33,6 @@ class JointSpaceTsidController
 {
 public:
   JointSpaceTsidController();
-
 
   controller_interface::CallbackReturn on_init() override;
   controller_interface::CallbackReturn on_configure(
@@ -65,32 +48,9 @@ public:
   void setPositionCb(
     std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
-protected:
-  tsid_controllers::Params params_;
-  std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
-  std::vector<std::vector<std::string>> state_interface_names_;
-
 private:
-
-  bool first_update_ = true;
-  bool tuning_mode_ = false;
-  pinocchio::Model model_;
-  pinocchio::Data data_;
-  tsid::robots::RobotWrapper * robot_wrapper_;
-  tsid::InverseDynamicsFormulationAccForce * formulation_;
-  tsid::solvers::SolverHQuadProgFast * solver_;
-  tsid::tasks::TaskJointPosture * task_joint_posture_;
-  tsid::tasks::TaskJointBounds * task_joint_bounds_;
-  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   rclcpp::Duration dt_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr joint_cmd_sub_;
-  std::vector<double> desired_pose_;
-  double v_scaling_;
-
-
-  void updateParams();
-
-
 };
 }
 

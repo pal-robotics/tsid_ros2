@@ -16,10 +16,6 @@
 #include <pluginlib/class_list_macros.hpp>
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include <pinocchio/parsers/urdf.hpp>
-#include <pinocchio/algorithm/compute-all-terms.hpp>
-#include <pinocchio/algorithm/model.hpp>
-#include <pinocchio/algorithm/joint-configuration.hpp>
 
 using namespace controller_interface;
 
@@ -59,7 +55,7 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_activate(
 controller_interface::return_type JointSpaceTsidController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  TsidPositionControl::updateParams();
+  TsidPositionControl::updateParams(); //updateParams()??
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
   compute_problem_and_set_command(state.first,state.second); //q and v
