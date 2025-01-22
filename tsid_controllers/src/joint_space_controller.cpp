@@ -55,7 +55,7 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_activate(
 controller_interface::return_type JointSpaceTsidController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  TsidPositionControl::updateParams(); //updateParams()??
+  TsidPositionControl::updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
   compute_problem_and_set_command(state.first,state.second); //q and v
@@ -65,7 +65,43 @@ controller_interface::return_type JointSpaceTsidController::update(
 void JointSpaceTsidController::setPositionCb(
   std_msgs::msg::Float64MultiArray::ConstSharedPtr msg)
 {
-  setDesiredRef(msg);
+  if (msg->data.size() != params_.joint_command_names.size()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Received joint position command with incorrect size");
+    return;
+  }
+
+  auto upper_limits = model_.upperPositionLimit.tail(model_.nv - 6);
+  auto lower_limits = model_.lowerPositionLimit.tail(model_.nv - 6);
+
+  for (auto joint : joint_command_names_) {
+
+    if (msg->data[jnt_command_id_[joint]] > upper_limits[model_.getJointId(joint) - 2] ||
+      msg->data[jnt_command_id_[joint]] < lower_limits[model_.getJointId(joint) - 2])
+    {
+      RCLCPP_ERROR(
+        get_node()->get_logger(), "Joint %s command out of boundaries! The motion will not be performed!",
+        joint.c_str());
+      return;
+    }
+  }
+
+  // Setting the reference
+  Eigen::VectorXd ref(params_.joint_command_names.size());
+
+  for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
+    ref[i] = msg->data[i];
+  }
+
+  tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
+  sample_posture_joint.setValue(ref);
+
+  task_joint_posture_->setReference(sample_posture_joint);
+
+  auto get_ref = task_joint_posture_->getReference();
+  auto ref_pos = get_ref.getValue();
+  RCLCPP_INFO(
+    get_node()->get_logger(), " Reference position joints : %f ",
+    ref_pos[0]);
 }
 
 
