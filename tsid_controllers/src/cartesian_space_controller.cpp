@@ -18,16 +18,14 @@
 #include <pluginlib/class_list_macros.hpp>
 
 using namespace controller_interface;
-namespace tsid_controllers
-{
+namespace tsid_controllers {
 using std::placeholders::_1;
 
 CartesianSpaceController::CartesianSpaceController()
 : tsid_controllers::TsidPositionControl() {}
 
 controller_interface::CallbackReturn CartesianSpaceController::on_configure(
-  const rclcpp_lifecycle::State & prev_state)
-{
+    const rclcpp_lifecycle::State &prev_state) {
   auto result = TsidPositionControl::on_configure(prev_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
     return result; // Propagate error if the base configuration fails
@@ -45,8 +43,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
   if (local_frame_) {
     RCLCPP_INFO(
-      get_node()->get_logger(),
-      "The reference is considered as expressed in the end effector frame");
+        get_node()->get_logger(),
+        "The reference is considered as expressed in the end effector frame");
   } else {
     RCLCPP_INFO(
       get_node()->get_logger(),
@@ -68,9 +66,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
   // Pose reference callback
   ee_cmd_sub_ =
-    get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
-    "cartesian_space_controller/pose_cmd", 1,
-    std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
+      get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
+          "cartesian_space_controller/pose_cmd", 1,
+          std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
   // print getParams().ee_names.size()
 
   // End effector tasks, one for each end effector in the config
@@ -103,8 +101,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 }
 
 controller_interface::CallbackReturn CartesianSpaceController::on_activate(
-  const rclcpp_lifecycle::State & previous_state)
-{
+    const rclcpp_lifecycle::State &previous_state) {
   auto result = TsidPositionControl::on_activate(previous_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
     return result; // Propagate error if the base configuration fails
