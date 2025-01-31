@@ -145,6 +145,14 @@ CartesianSpaceController::update(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
+      current_waypoint_++;
+
+      if (current_waypoint_ >= waypoints_.size()) {
+        interpolate_ = false;
+        RCLCPP_INFO(get_node()->get_logger(), "Desired position reached");
+      }
+    }
+  }
   geometry_msgs::msg::Pose current_pose;
   current_pose.position.x = h_ee_.translation()[0];
   current_pose.position.y = h_ee_.translation()[1];
@@ -208,6 +216,7 @@ void CartesianSpaceController::setPoseCallback(
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
           tsid::math::SE3ToVector(se3, ref);
 
+          rot_des_ = h_ee_.rotation() * quat.toRotationMatrix();
         } else {
           // Taking desired position from the message
           pinocchio::Motion desired_pose;
@@ -227,10 +236,8 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
-          Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
-
-          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
-          tsid::math::SE3ToVector(se3, ref);
+          // pinocchio::SE3 se3(rot_des_, desired_pose_[ee_id_[ee]]);
+          // tsid::math::SE3ToVector(se3, ref);
         }
 
         tsid::trajectories::TrajectorySample sample_posture_ee =
