@@ -19,37 +19,32 @@
 #include <string>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
-#include <controller_interface/controller_interface.hpp>
-#include <tsid_controllers_params.hpp>
-#include <tsid/trajectories/trajectory-euclidian.hpp>
-#include <tsid/trajectories/trajectory-se3.hpp>
 #include "geometry_msgs/msg/pose.hpp"
 #include "tsid_controller_msgs/msg/ee_pos.hpp"
 #include "tsid_controllers/tsid_position_control.hpp"
+#include <controller_interface/controller_interface.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <tsid/trajectories/trajectory-euclidian.hpp>
+#include <tsid/trajectories/trajectory-se3.hpp>
+#include <tsid_controllers_params.hpp>
 
-
-namespace tsid_controllers
-{
-class CartesianSpaceController : public TsidPositionControl
-{
+namespace tsid_controllers {
+class CartesianSpaceController : public TsidPositionControl {
 
 public:
   CartesianSpaceController();
 
   controller_interface::CallbackReturn on_init() override;
-  controller_interface::CallbackReturn on_configure(
-    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::return_type update(
-    const rclcpp::Time & time,
-    const rclcpp::Duration & period) override;
+  controller_interface::return_type
+  update(const rclcpp::Time &time, const rclcpp::Duration &period) override;
 
-  controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state)
-  override;
+  controller_interface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
-  void setPoseCallback(
-    tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
+  void setPoseCallback(tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
 
 protected:
   const auto &getParams() const { return TsidPositionControl::params_; }
@@ -68,8 +63,7 @@ private:
   std::vector<std::string> ee_names_;
 
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos;
-
 };
-}
+} // namespace tsid_controllers
 
-#endif  // CARTESIAN_SPACE_CONTROLLER_HPP_
+#endif // CARTESIAN_SPACE_CONTROLLER_HPP_

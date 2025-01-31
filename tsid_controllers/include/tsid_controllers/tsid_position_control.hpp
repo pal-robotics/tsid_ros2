@@ -19,56 +19,54 @@
 #include <string>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
-#include <controller_interface/controller_interface.hpp>
-#include <hardware_interface/actuator_interface.hpp>
+#include "geometry_msgs/msg/pose.hpp"
 #include "hardware_interface/component_parser.hpp"
 #include "pal_utils/better_enums.hpp"
-#include <tsid_controllers_params.hpp>
+#include "std_msgs/msg/float64_multi_array.hpp"
+#include <controller_interface/controller_interface.hpp>
+#include <hardware_interface/actuator_interface.hpp>
 #include <pinocchio/fwd.hpp>
-#include <pinocchio/multibody/model.hpp>
 #include <pinocchio/multibody/data.hpp>
-#include <tsid/robots/robot-wrapper.hpp>
+#include <pinocchio/multibody/model.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
-#include <tsid/solvers/solver-HQP-eiquadprog.hpp>
-#include <tsid/solvers/solver-HQP-eiquadprog-rt.hpp>
+#include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog-fast.hpp>
-#include <tsid/tasks/task-joint-posture.hpp>
-#include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+#include <tsid/solvers/solver-HQP-eiquadprog-rt.hpp>
+#include <tsid/solvers/solver-HQP-eiquadprog.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
+#include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+#include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include "geometry_msgs/msg/pose.hpp"
-#include "std_msgs/msg/float64_multi_array.hpp"
+#include <tsid_controllers_params.hpp>
 
-namespace tsid_controllers
-{
-BETTER_ENUM(
-  Interfaces, int, position = 0, velocity = 1, effort = 2);
+namespace tsid_controllers {
+BETTER_ENUM(Interfaces, int, position = 0, velocity = 1, effort = 2);
 
-
-class TsidPositionControl
-  : public controller_interface::ControllerInterface
-{
+class TsidPositionControl : public controller_interface::ControllerInterface {
 public:
   TsidPositionControl();
 
   controller_interface::CallbackReturn on_init() override;
-  controller_interface::CallbackReturn on_configure(
-    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::InterfaceConfiguration command_interface_configuration() const override;
-  controller_interface::InterfaceConfiguration state_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  command_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  state_interface_configuration() const override;
 
-  controller_interface::return_type update(
-    const rclcpp::Time & time,
-    const rclcpp::Duration & period) override {return controller_interface::return_type::OK;};
+  controller_interface::return_type
+  update(const rclcpp::Time &time, const rclcpp::Duration &period) override {
+    return controller_interface::return_type::OK;
+  };
 
-  controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state)
-  override;
+  controller_interface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state)
-  override;
+  controller_interface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
 
   void DefaultPositionTasks();
   void updateParams();
@@ -77,31 +75,32 @@ public:
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
 
 protected:
-  template<typename T>
-  using InterfaceReferences = std::vector<std::vector<std::reference_wrapper<T>>>;
-  InterfaceReferences<hardware_interface::LoanedStateInterface> joint_state_interfaces_;
+  template <typename T>
+  using InterfaceReferences =
+      std::vector<std::vector<std::reference_wrapper<T>>>;
+  InterfaceReferences<hardware_interface::LoanedStateInterface>
+      joint_state_interfaces_;
   tsid_controllers::Params params_;
   std::vector<std::vector<std::string>> state_interface_names_;
   std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
-  tsid::robots::RobotWrapper * robot_wrapper_;
-  tsid::InverseDynamicsFormulationAccForce * formulation_;
+  tsid::robots::RobotWrapper *robot_wrapper_;
+  tsid::InverseDynamicsFormulationAccForce *formulation_;
   std::vector<std::string> joint_names_;
   pinocchio::Model model_;
   double v_scaling_;
   std::vector<std::string> joint_command_names_;
   std::map<std::string, int> jnt_id_;
   std::map<std::string, int> jnt_command_id_;
-  tsid::tasks::TaskJointPosture * task_joint_posture_;
+  tsid::tasks::TaskJointPosture *task_joint_posture_;
 
-private: 
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
+private:
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
 
-    rclcpp::Duration dt_;
-    tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
-    tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
-    tsid::solvers::SolverHQuadProgFast * solver_;
-
+  rclcpp::Duration dt_;
+  tsid::trajectories::TrajectoryEuclidianConstant *traj_joint_posture_;
+  tsid::tasks::TaskJointPosVelAccBounds *task_joint_bounds_;
+  tsid::solvers::SolverHQuadProgFast *solver_;
 };
-}
+} // namespace tsid_controllers
 
-#endif  // TSID_POSITION_CONTROL_HPP_
+#endif // TSID_POSITION_CONTROL_HPP_

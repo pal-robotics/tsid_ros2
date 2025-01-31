@@ -13,40 +13,36 @@
 // limitations under the License.
 
 #include "tsid_controllers/tsid_position_control.hpp"
-#include <pluginlib/class_list_macros.hpp>
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/algorithm/compute-all-terms.hpp>
-#include <pinocchio/algorithm/model.hpp>
 #include <pinocchio/algorithm/joint-configuration.hpp>
+#include <pinocchio/algorithm/model.hpp>
+#include <pinocchio/parsers/urdf.hpp>
+#include <pluginlib/class_list_macros.hpp>
 
 using namespace controller_interface;
 
-namespace tsid_controllers
-{
+namespace tsid_controllers {
 using std::placeholders::_1;
 
 TsidPositionControl::TsidPositionControl()
-: controller_interface::ControllerInterface(),
-  dt_(0, 0)
-{
-}
+    : controller_interface::ControllerInterface(), dt_(0, 0) {}
 
-controller_interface::CallbackReturn TsidPositionControl::on_init()
-{
+controller_interface::CallbackReturn TsidPositionControl::on_init() {
   try {
-    param_listener_ = std::make_shared<tsid_controllers::ParamListener>(get_node());
+    param_listener_ =
+        std::make_shared<tsid_controllers::ParamListener>(get_node());
 
     if (!param_listener_) {
-      RCLCPP_ERROR(get_node()->get_logger(), "Failed to initialize ParamListener.");
+      RCLCPP_ERROR(get_node()->get_logger(),
+                   "Failed to initialize ParamListener.");
       return controller_interface::CallbackReturn::ERROR;
     }
     params_ = param_listener_->get_params();
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(
-      get_node()->get_logger(), "Exception thrown during controller's init: %s",
-      e.what());
+  } catch (const std::exception &e) {
+    RCLCPP_ERROR(get_node()->get_logger(),
+                 "Exception thrown during controller's init: %s", e.what());
     return controller_interface::CallbackReturn::ERROR;
   }
 
@@ -54,8 +50,7 @@ controller_interface::CallbackReturn TsidPositionControl::on_init()
 }
 
 controller_interface::CallbackReturn TsidPositionControl::on_configure(
-  const rclcpp_lifecycle::State & /*prev_state*/)
-{
+    const rclcpp_lifecycle::State & /*prev_state*/) {
   // Check if parameters were taken correctly
   if (!param_listener_) {
     RCLCPP_ERROR(get_node()->get_logger(), "Error encountered during init");
@@ -74,9 +69,9 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   }
 
   // Check if command joint names are not empty
-  if (params_.joint_command_names.empty() ) {
-    RCLCPP_INFO(
-      get_node()->get_logger(), "The joint command names is empty. Joint state will be used");
+  if (params_.joint_command_names.empty()) {
+    RCLCPP_INFO(get_node()->get_logger(),
+                "The joint command names is empty. Joint state will be used");
     joint_command_names_ = params_.joint_state_names;
   } else {
     joint_command_names_.resize(params_.joint_command_names.size());
@@ -88,13 +83,13 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
 
       } else {
         joint_command_names_[i] = params_.joint_command_names[i];
-
       }
     }
   }
 
   if (params_.ee_names.empty()) {
-    RCLCPP_ERROR(get_node()->get_logger(), "The end effector name cannot be empty");
+    RCLCPP_ERROR(get_node()->get_logger(),
+                 "The end effector name cannot be empty");
     return controller_interface::CallbackReturn::ERROR;
   }
 
@@ -104,14 +99,14 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   joint_state_interfaces_.resize(joint_names_.size());
   state_interface_names_.resize(joint_names_.size());
 
-  //Creating a map between index and joint
+  // Creating a map between index and joint
   int idx = 0;
 
   Interfaces pos_iface = Interfaces::position;
   Interfaces vel_iface = Interfaces::velocity;
   Interfaces eff_iface = Interfaces::effort;
 
-  for (const auto & joint : joint_names_) {
+  for (const auto &joint : joint_names_) {
 
     jnt_id_.insert(std::make_pair(joint, idx));
 
@@ -119,9 +114,12 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
 
     // Create the state interfaces
     state_interface_names_[idx].resize(3);
-    state_interface_names_[idx][pos_iface._value] = joint + "/" + pos_iface._to_string();
-    state_interface_names_[idx][vel_iface._value] = joint + "/" + vel_iface._to_string();
-    state_interface_names_[idx][eff_iface._value] = joint + "/" + eff_iface._to_string();
+    state_interface_names_[idx][pos_iface._value] =
+        joint + "/" + pos_iface._to_string();
+    state_interface_names_[idx][vel_iface._value] =
+        joint + "/" + vel_iface._to_string();
+    state_interface_names_[idx][eff_iface._value] =
+        joint + "/" + eff_iface._to_string();
 
     idx++;
   }
@@ -129,25 +127,24 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   idx = 0;
 
   // Creating a map for command joint
-  for (const auto & joint : joint_command_names_) {
+  for (const auto &joint : joint_command_names_) {
     jnt_command_id_.insert(std::make_pair(joint, idx));
     idx++;
   }
 
   // Creating model in pinocchio
-  pinocchio::urdf::buildModelFromXML(
-    this->get_robot_description(), pinocchio::JointModelFreeFlyer(), model_);
+  pinocchio::urdf::buildModelFromXML(this->get_robot_description(),
+                                     pinocchio::JointModelFreeFlyer(), model_);
 
-  RCLCPP_INFO(get_node()->get_logger(), "Model has been built, it has %d joints", model_.njoints);
+  RCLCPP_INFO(get_node()->get_logger(),
+              "Model has been built, it has %d joints", model_.njoints);
 
   std::vector<pinocchio::JointIndex> joints_to_lock;
 
-  for (auto & name : model_.names) {
+  for (auto &name : model_.names) {
     if (name != "universe" && name != "root_joint" &&
-      std::find(
-        joint_names_.begin(), joint_names_.end(),
-        name) == joint_names_.end())
-    {
+        std::find(joint_names_.begin(), joint_names_.end(), name) ==
+            joint_names_.end()) {
       joints_to_lock.push_back(model_.getJointId(name));
       RCLCPP_INFO(get_node()->get_logger(), "Lock joint %s: ", name.c_str());
     }
@@ -155,84 +152,81 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
 
   /* Removing the unused joints from the model*/
   model_ =
-    buildReducedModel(model_, joints_to_lock, pinocchio::neutral(model_));
+      buildReducedModel(model_, joints_to_lock, pinocchio::neutral(model_));
 
   for (auto joint : model_.names) {
     RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
   }
 
   // Getting control period
-  dt_ = rclcpp::Duration(std::chrono::duration<double, std::milli>(1e3 / this->get_update_rate()));
+  dt_ = rclcpp::Duration(
+      std::chrono::duration<double, std::milli>(1e3 / this->get_update_rate()));
   RCLCPP_INFO(get_node()->get_logger(), "Control period: %f", dt_.seconds());
 
   // Initialization of the TSID
   robot_wrapper_ = new tsid::robots::RobotWrapper(
-    model_,
-    tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
+      model_, tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM,
+      true);
 
-  formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
+  formulation_ = new tsid::InverseDynamicsFormulationAccForce(
+      "tsid", *robot_wrapper_, true);
 
   DefaultPositionTasks();
-  
+
   // Initializing solver
   solver_ = new tsid::solvers::SolverHQuadProgFast("qp solver");
 
-  solver_->resize(formulation_->nVar(), formulation_->nEq(), formulation_->nIn());
+  solver_->resize(formulation_->nVar(), formulation_->nEq(),
+                  formulation_->nIn());
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-InterfaceConfiguration TsidPositionControl::state_interface_configuration()
-const
-{
+InterfaceConfiguration
+TsidPositionControl::state_interface_configuration() const {
   std::vector<std::string> state_interfaces_config_names;
 
-  for (const auto & joint: joint_names_) {
+  for (const auto &joint : joint_names_) {
     for (int i = 0; i < 3; i++) {
-      state_interfaces_config_names.push_back(state_interface_names_[jnt_id_.at(joint)][i]);
+      state_interfaces_config_names.push_back(
+          state_interface_names_[jnt_id_.at(joint)][i]);
     }
   }
-  return {
-    controller_interface::interface_configuration_type::INDIVIDUAL, state_interfaces_config_names};
+  return {controller_interface::interface_configuration_type::INDIVIDUAL,
+          state_interfaces_config_names};
 }
 
 controller_interface::InterfaceConfiguration
-TsidPositionControl::command_interface_configuration() const
-{
+TsidPositionControl::command_interface_configuration() const {
 
   std::vector<std::string> command_interfaces_config_names;
-  for (const auto & joint : params_.joint_command_names) {
+  for (const auto &joint : params_.joint_command_names) {
     const auto full_name = joint + "/position";
     command_interfaces_config_names.push_back(full_name);
   }
 
-  return {
-    controller_interface::interface_configuration_type::INDIVIDUAL,
-    command_interfaces_config_names};
+  return {controller_interface::interface_configuration_type::INDIVIDUAL,
+          command_interfaces_config_names};
 }
 controller_interface::CallbackReturn TsidPositionControl::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
+    const rclcpp_lifecycle::State & /*previous_state*/) {
   // Check if all the command interfaces are in the actuator interface
-  for (const auto & joint : joint_names_) {
-    if (
-      !controller_interface::get_ordered_interfaces(
-        state_interfaces_, state_interface_names_[jnt_id_[joint]],
-        std::string(""),
-        joint_state_interfaces_[jnt_id_[joint]]))
-    {
-      RCLCPP_ERROR(
-        this->get_node()->get_logger(), "Expected %zu state interfaces, got %zu",
-        state_interface_names_[jnt_id_[joint]].size(),
-        joint_state_interfaces_[jnt_id_[joint]].size());
+  for (const auto &joint : joint_names_) {
+    if (!controller_interface::get_ordered_interfaces(
+            state_interfaces_, state_interface_names_[jnt_id_[joint]],
+            std::string(""), joint_state_interfaces_[jnt_id_[joint]])) {
+      RCLCPP_ERROR(this->get_node()->get_logger(),
+                   "Expected %zu state interfaces, got %zu",
+                   state_interface_names_[jnt_id_[joint]].size(),
+                   joint_state_interfaces_[jnt_id_[joint]].size());
       return controller_interface::CallbackReturn::ERROR;
     }
   }
 
-  for (const auto & joint : joint_names_) {
-    RCLCPP_INFO(
-      get_node()->get_logger(), "Joint %s position: %f",
-      joint.c_str(), joint_state_interfaces_[jnt_id_[joint]][0].get().get_value());
+  for (const auto &joint : joint_names_) {
+    RCLCPP_INFO(get_node()->get_logger(), "Joint %s position: %f",
+                joint.c_str(),
+                joint_state_interfaces_[jnt_id_[joint]][0].get().get_value());
   }
 
   // Taking initial position from the joint state interfaces
@@ -249,13 +243,12 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
   // Setting posture task reference as initial position
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
-  
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn TsidPositionControl::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
+    const rclcpp_lifecycle::State & /*previous_state*/) {
   // reset command buffer
   release_interfaces();
   for (auto joint : params_.joint_state_names) {
@@ -264,87 +257,94 @@ controller_interface::CallbackReturn TsidPositionControl::on_deactivate(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-std::pair<Eigen::VectorXd, Eigen::VectorXd> TsidPositionControl::getActualState() const {
+std::pair<Eigen::VectorXd, Eigen::VectorXd>
+TsidPositionControl::getActualState() const {
   Eigen::VectorXd q = Eigen::VectorXd::Zero(robot_wrapper_->nq());
   Eigen::VectorXd v = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
   for (const auto &joint : joint_names_) {
     q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2] =
-        joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::position].get().get_value();
+        joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::position]
+            .get()
+            .get_value();
     v.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) - 2] =
-        joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::velocity].get().get_value();
+        joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::velocity]
+            .get()
+            .get_value();
   }
 
   return std::make_pair(q, v);
 }
 
-void TsidPositionControl::updateParams()
-{
+void TsidPositionControl::updateParams() {
   if (param_listener_->is_old(params_)) {
     params_ = param_listener_->get_params();
     RCLCPP_INFO(get_node()->get_logger(), "Updating parameters");
-    
+
     v_scaling_ = params_.velocity_scaling;
-    Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
+    Eigen::VectorXd v_max =
+        v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
     task_joint_bounds_->setVelocityBounds(v_max);
-    task_joint_posture_->Kp(params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6));
+    task_joint_posture_->Kp(params_.posture_gain *
+                            Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6));
     task_joint_posture_->Kd(2.0 * task_joint_posture_->Kp().cwiseSqrt());
   }
 }
 
-void TsidPositionControl::DefaultPositionTasks(){
+void TsidPositionControl::DefaultPositionTasks() {
 
-    // Joint Posture Task
-    task_joint_posture_ = new tsid::tasks::TaskJointPosture(
-        "task-joint-posture",
-        *robot_wrapper_);
-    Eigen::VectorXd kp = params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
-    Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
-    task_joint_posture_->Kp(kp);
-    task_joint_posture_->Kd(kd);
-    int posture_priority = 1;  // 0 constraint, 1 cost function
-    double transition_time = 0.0;
-    double posture_weight = 1e-3;
+  // Joint Posture Task
+  task_joint_posture_ =
+      new tsid::tasks::TaskJointPosture("task-joint-posture", *robot_wrapper_);
+  Eigen::VectorXd kp =
+      params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
+  task_joint_posture_->Kp(kp);
+  task_joint_posture_->Kd(kd);
+  int posture_priority = 1; // 0 constraint, 1 cost function
+  double transition_time = 0.0;
+  double posture_weight = 1e-3;
 
-    Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
+  Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
-    traj_joint_posture_ = new tsid::trajectories::TrajectoryEuclidianConstant(
-        "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
-    tsid::trajectories::TrajectorySample sample_posture = traj_joint_posture_->computeNext();
-    task_joint_posture_->setReference(sample_posture);
-    formulation_->addMotionTask(
-        *task_joint_posture_, posture_weight, posture_priority,
-        transition_time);
+  traj_joint_posture_ = new tsid::trajectories::TrajectoryEuclidianConstant(
+      "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
+  tsid::trajectories::TrajectorySample sample_posture =
+      traj_joint_posture_->computeNext();
+  task_joint_posture_->setReference(sample_posture);
+  formulation_->addMotionTask(*task_joint_posture_, posture_weight,
+                              posture_priority, transition_time);
 
   // Joint Bounds Task
-    task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
-      "task-joint-bounds",
-      *robot_wrapper_, dt_.seconds(), true);
-    Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
-    Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
+  task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
+      "task-joint-bounds", *robot_wrapper_, dt_.seconds(), true);
+  Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
+  Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
 
-    for (int i = 0; i < q_max.size(); i++) {
-      std::cout << "q_max" << q_max[i] << std::endl;
-      std::cout << "q_min" << q_min[i] << std::endl;
-    }
+  for (int i = 0; i < q_max.size(); i++) {
+    std::cout << "q_max" << q_max[i] << std::endl;
+    std::cout << "q_min" << q_min[i] << std::endl;
+  }
 
-    task_joint_bounds_->setPositionBounds(q_min, q_max);
+  task_joint_bounds_->setPositionBounds(q_min, q_max);
 
-    int bounds_priority = 0;  // 0 constraint, 1 cost function
-    double bounds_weight = 1;
-    // Joint velocity bounds
-    v_scaling_ = params_.velocity_scaling;
-    Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
-    Eigen::VectorXd v_min = -v_max;
-    task_joint_bounds_->setVelocityBounds(v_max);
-    formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
-
+  int bounds_priority = 0; // 0 constraint, 1 cost function
+  double bounds_weight = 1;
+  // Joint velocity bounds
+  v_scaling_ = params_.velocity_scaling;
+  Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
+  Eigen::VectorXd v_min = -v_max;
+  task_joint_bounds_->setVelocityBounds(v_max);
+  formulation_->addMotionTask(*task_joint_bounds_, bounds_weight,
+                              bounds_priority, transition_time);
 }
 
-void TsidPositionControl::compute_problem_and_set_command(const Eigen::VectorXd q, const Eigen::VectorXd v){
-  
+void TsidPositionControl::compute_problem_and_set_command(
+    const Eigen::VectorXd q, const Eigen::VectorXd v) {
+
   // Computing the problem data
-  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q, v);
+  const tsid::solvers::HQPData solverData =
+      formulation_->computeProblemData(0.0, q, v);
 
   // Solving the problem
   const auto sol = solver_->solve(solverData);
@@ -359,16 +359,14 @@ void TsidPositionControl::compute_problem_and_set_command(const Eigen::VectorXd 
   auto q_cmd = q_int.tail(model_.nq - 7);
 
   // Setting the command to the joint command interfaces
-  for (const auto & joint : joint_command_names_) {
+  for (const auto &joint : joint_command_names_) {
     command_interfaces_[jnt_command_id_[joint]].set_value(
-      q_cmd[model_.getJointId(joint) - 2]);
+        q_cmd[model_.getJointId(joint) - 2]);
   }
-
 }
 
-}  // namespace dynamic_tsid_controller
+} // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
 
-PLUGINLIB_EXPORT_CLASS(
-  tsid_controllers::TsidPositionControl,
-  controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(tsid_controllers::TsidPositionControl,
+                       controller_interface::ControllerInterface)

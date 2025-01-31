@@ -19,39 +19,35 @@
 #include <string>
 #include <vector>
 
-#include <rclcpp/rclcpp.hpp>
-#include <controller_interface/controller_interface.hpp>
-#include <tsid_controllers_params.hpp>
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "tsid_controllers/tsid_position_control.hpp"
+#include <controller_interface/controller_interface.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <tsid_controllers_params.hpp>
 
-namespace tsid_controllers
-{
+namespace tsid_controllers {
 
-class JointSpaceTsidController
-  : public TsidPositionControl
-{
+class JointSpaceTsidController : public TsidPositionControl {
 public:
   JointSpaceTsidController();
 
   controller_interface::CallbackReturn on_init() override;
-  controller_interface::CallbackReturn on_configure(
-    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::return_type update(
-    const rclcpp::Time & time,
-    const rclcpp::Duration & period) override;
+  controller_interface::return_type
+  update(const rclcpp::Time &time, const rclcpp::Duration &period) override;
 
-  controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state)
-  override;
+  controller_interface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
-  void setPositionCb(
-    std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
+  void setPositionCb(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
 private:
   rclcpp::Duration dt_;
-  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr joint_cmd_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
+      joint_cmd_sub_;
 };
-}
+} // namespace tsid_controllers
 
-#endif  // JOINT_SPACE_TISD_CONTROLLER_HPP_
+#endif // JOINT_SPACE_TISD_CONTROLLER_HPP_
