@@ -326,6 +326,80 @@ void CartesianSpaceController::setPoseCallback(
   }
   iteration = 0;
 }
+void CartesianSpaceController::interpolate(double t_curr)
+{
+  /* waypoints.clear();
+   waypoints_orientations.clear();
+   current_waypoint_ = 0;
+   std::vector<double> t_;
+   for (double i = 0; i <= t1; i += step) {
+     t_.push_back(i);
+   }
+
+   Eigen::Vector3d v = (pf - p0) / (t1 - t0);
+
+   Eigen::Quaterniond quat(actual_rot);
+   Eigen::Quaterniond quat_des(rot_des);
+   for (int i = 0; i < t_.size(); i++) {
+     double Ti = t0;
+     Eigen::Vector3d pos = p0 + v * (t_[i] - Ti);
+     waypoints.push_back(pos);
+     Eigen::Quaterniond quat = quat.slerp(t_[i] / t1, quat_des);
+     waypoints_orientations.push_back(quat);
+   }
+   interpolate_ = true;*/
+  if (position_end_ == position_start_ && quat_init_ == quat_des_) {
+    position_curr_ = position_end_;
+    rot_des_ = quat_init_.toRotationMatrix();
+    return;
+  } else if (position_end_ == position_start_) {
+    position_curr_ = position_end_;
+    double t_ = 2.0;
+    if (t_curr > t_) {
+      rot_des_ = quat_des_.toRotationMatrix();
+      return;
+    } else {
+      Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_), quat_des_);
+      rot_des_ = quat.toRotationMatrix();
+      return;
+    }
+  }
+
+  Eigen::Vector3d un_dir_vec = (position_end_ - position_start_) /
+    (position_end_ - position_start_).norm();
+
+  double s = 0;
+  double s_dot = 0;
+
+
+  double a_max;
+  a_max = v_max / ( 2 * dt_.seconds());
+  t_acc_ = v_max / a_max;
+  t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
+
+  Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_flat_ + 2 * t_acc_), quat_des_);
+
+  rot_des_ = quat.toRotationMatrix();
+  if (t_curr < t_acc_) {
+    s = 0.5 * a_max * t_curr * t_curr;
+    s_dot = t_curr;
+  } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
+    s = v_max * (t_curr - t_acc_ / 2);
+    s_dot = v_max;
+  } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
+    s = (position_end_ - position_start_).norm() - 0.5 * a_max * (t_flat_ + t_acc_ - t_curr) *
+      (t_flat_ + t_acc_ - t_curr);
+  } else {
+    s = (position_end_ - position_start_).norm();
+    s_dot = 0;
+    rot_des_ = quat_des_.toRotationMatrix();
+  }
+
+
+  position_curr_ = position_start_ + s * un_dir_vec;
+  vel_curr_ = s_dot * un_dir_vec;
+
+}
 
 void CartesianSpaceController::compute_trajectory_params()
 {
