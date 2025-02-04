@@ -377,7 +377,7 @@ void TsidPositionControl::compute_problem_and_set_command(
   const auto sol = solver_->solve(solverData);
   // Integrating acceleration to get velocity
   Eigen::VectorXd a = formulation_->getAccelerations(sol);
-  Eigen::VectorXd v_cmd = v_ + a * dt_.seconds();
+  Eigen::VectorXd v_cmd = v + a * dt_.seconds();
 
   // Integrating velocity to get position
   auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
