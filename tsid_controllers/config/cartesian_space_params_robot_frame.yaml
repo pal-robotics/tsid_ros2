@@ -1,8 +1,8 @@
 cartesian_space_controller:
   ros__parameters:
     type: tsid_controllers/CartesianSpaceController
-    update_rate: 25
-    is_async: True
+    update_rate: 1000
+  
     local_frame: false
     
     joint_state_names:
@@ -35,11 +35,17 @@ cartesian_space_controller:
 
     cartesian_gain:
          arm_right_7_link:
-          kp_x: 500.0
-          kp_y: 500.0
-          kp_z: 1000.0
-          kp_roll: 70.0
-          kp_pitch: 70.0
-          kp_yaw: 70.0
+          kp_x: 1500.0
+          kp_y: 1500.0
+          kp_z: 1500.0
+          kp_roll: 700.0
+          kp_pitch: 700.0
+          kp_yaw: 700.0
+          #kp_x: 500.0
+          #kp_y: 500.0
+          #kp_z: 1000.0
+          #kp_roll: 70.0
+          #kp_pitch: 70.0
+          #kp_yaw: 70.0
 
 

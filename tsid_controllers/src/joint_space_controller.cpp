@@ -44,7 +44,11 @@ JointSpaceTsidController::update(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
+
+  t_curr_ = t_curr_ + dt_.seconds();
+
   TsidPositionControl::updateParams();
+
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
   compute_problem_and_set_command(state.first, state.second); // q and v
@@ -87,16 +91,72 @@ void JointSpaceTsidController::setPositionCb(
     ref[i] = msg->data[i];
   }
 
-  tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
+  /*tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
   sample_posture_joint.setValue(ref);
 
-  task_joint_posture_->setReference(sample_posture_joint);
+  task_joint_posture_->setReference(sample_posture_joint);*/
 
-  auto get_ref = task_joint_posture_->getReference();
-  auto ref_pos = get_ref.getValue();
-  RCLCPP_INFO(
-    get_node()->get_logger(), " Reference position joints : %f ",
-    ref_pos[0]);
+
+  position_start_ = getActualState().first.tail(params_.joint_command_names.size());
+  position_end_ = ref;
+
+  t_curr_ = 0;
+}
+
+void JointSpaceTsidController::interpolate(double t_curr)
+{
+  if (position_end_ == position_start_) {
+    position_curr_ = position_end_;
+    return;
+  }
+
+
+  int maxDiffIndex = 0;
+  double maxDiff = std::abs(position_end_[0] - position_start_[0]);
+
+  for (size_t i = 1; i < position_start_.size(); ++i) {
+    double currentDiff = std::abs(position_end_[i] - position_start_[i]);
+    if (currentDiff > maxDiff) {
+      maxDiff = currentDiff;
+      maxDiffIndex = i;
+    }
+  }
+
+  double a_max;
+
+  a_max = v_max / ( 2 * dt_.seconds());
+  t_acc_ = v_max / a_max;
+
+
+  double s = 0;
+  double s_dot = 0;
+
+  t_flat_ =
+    ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max * t_acc_) /
+    v_max;
+
+  for (auto joint : params_.joint_command_names) {
+    if (t_curr < t_acc_) {
+      s = 0.5 * a_max * t_curr * t_curr;
+      s_dot = t_curr;
+    } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
+      s = v_max * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) * (t_curr - t_acc_ / 2);
+      s_dot = v_max * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]));
+    } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
+      s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) -
+        0.5 * a_max *
+        (t_flat_ + t_acc_ - t_curr) *
+        (t_flat_ + t_acc_ - t_curr);
+    } else {
+      s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]);
+      s_dot = 0;
+    }
+    position_curr_[jnt_id_[joint]] = position_start_[jnt_id_[joint]] + s;
+    vel_curr_[jnt_id_[joint]] = s_dot;
+  }
+
 }
 
 } // namespace tsid_controllers

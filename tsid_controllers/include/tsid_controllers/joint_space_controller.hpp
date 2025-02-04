@@ -41,6 +41,8 @@ public:
 
   void setPositionCb(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
+  void interpolate(double t);
+
 private:
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
     joint_cmd_sub_;

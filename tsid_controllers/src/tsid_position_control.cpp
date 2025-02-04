@@ -182,6 +182,14 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
     formulation_->nVar(), formulation_->nEq(),
     formulation_->nIn());
 
+
+  publisher_curr_vel =
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("current_vel", 10);
+
+  publisher_curr_pos =
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("current_pos", 10);
+
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -246,6 +254,8 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
 
   q0 = state.first;
   v0 = state.second;
+
+  q_prev_ = q0.tail(robot_wrapper_->nq() - 7);
 
   formulation_->computeProblemData(0.0, q0, v0);
 
@@ -365,10 +375,9 @@ void TsidPositionControl::compute_problem_and_set_command(
 
   // Solving the problem
   const auto sol = solver_->solve(solverData);
-
   // Integrating acceleration to get velocity
   Eigen::VectorXd a = formulation_->getAccelerations(sol);
-  Eigen::VectorXd v_cmd = v + a * 0.5 * dt_.seconds();
+  Eigen::VectorXd v_cmd = v_ + a * dt_.seconds();
 
   // Integrating velocity to get position
   auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());

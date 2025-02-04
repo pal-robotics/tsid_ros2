@@ -18,14 +18,16 @@
 #include <pluginlib/class_list_macros.hpp>
 
 using namespace controller_interface;
-namespace tsid_controllers {
+namespace tsid_controllers
+{
 using std::placeholders::_1;
 
 CartesianSpaceController::CartesianSpaceController()
 : tsid_controllers::TsidPositionControl() {}
 
 controller_interface::CallbackReturn CartesianSpaceController::on_configure(
-    const rclcpp_lifecycle::State &prev_state) {
+  const rclcpp_lifecycle::State & prev_state)
+{
   auto result = TsidPositionControl::on_configure(prev_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
     return result; // Propagate error if the base configuration fails
@@ -43,8 +45,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
   if (local_frame_) {
     RCLCPP_INFO(
-        get_node()->get_logger(),
-        "The reference is considered as expressed in the end effector frame");
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the end effector frame");
   } else {
     RCLCPP_INFO(
       get_node()->get_logger(),
@@ -66,9 +68,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
   // Pose reference callback
   ee_cmd_sub_ =
-      get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
-          "cartesian_space_controller/pose_cmd", 1,
-          std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
+    get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
+    "cartesian_space_controller/pose_cmd", 1,
+    std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
   // print getParams().ee_names.size()
 
   // End effector tasks, one for each end effector in the config
@@ -101,7 +103,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 }
 
 controller_interface::CallbackReturn CartesianSpaceController::on_activate(
-    const rclcpp_lifecycle::State &previous_state) {
+  const rclcpp_lifecycle::State & previous_state)
+{
   auto result = TsidPositionControl::on_activate(previous_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
     return result; // Propagate error if the base configuration fails
@@ -137,7 +140,25 @@ CartesianSpaceController::update(
   TsidPositionControl::updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
-  compute_problem_and_set_command(state.first, state.second); // q and v
+
+  // if (iteration % 4 == 0) {
+  interpolate(t_curr_);
+
+  Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
+
+  pinocchio::SE3 se3(rot_des_, position_curr_);
+  tsid::math::SE3ToVector(se3, ref);
+
+  Eigen::VectorXd ref_vel = Eigen::VectorXd::Zero(6);
+  ref_vel.head<3>() = vel_curr_;
+  tsid::trajectories::TrajectorySample sample_posture_ee =
+    traj_ee_[ee_id_[ee_names_[0]]].computeNext();
+  sample_posture_ee.setValue(ref);
+  sample_posture_ee.setDerivative(ref_vel);
+  task_ee_[ee_id_[ee_names_[0]]]->setReference(sample_posture_ee);
+  // }
+
+  compute_problem_and_set_command(state.first, state.second);   // q and v
   auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
@@ -149,17 +170,22 @@ CartesianSpaceController::update(
         RCLCPP_INFO(get_node()->get_logger(), "Desired position reached");
       }
     }
-  }
+  }*/
+
+
   geometry_msgs::msg::Pose current_pose;
+  Eigen::Quaterniond quat_curr(h_ee_.rotation());
   current_pose.position.x = h_ee_.translation()[0];
   current_pose.position.y = h_ee_.translation()[1];
   current_pose.position.z = h_ee_.translation()[2];
-  current_pose.orientation.x = 0;
-  current_pose.orientation.y = 0;
-  current_pose.orientation.z = 0;
-  current_pose.orientation.w = 1;
+  current_pose.orientation.x = quat_curr.x();
+  current_pose.orientation.y = quat_curr.y();
+  current_pose.orientation.z = quat_curr.z();
+  current_pose.orientation.w = quat_curr.w();
 
   publisher_curr_pos->publish(current_pose);
+
+  iteration++;
 
   return controller_interface::return_type::OK;
 }
@@ -185,7 +211,6 @@ void CartesianSpaceController::setPoseCallback(
         auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
           TsidPositionControl::formulation_->data(),
           TsidPositionControl::model_.getFrameId(ee_names_[i]));
-
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
 
         if (local_frame_) {
@@ -242,8 +267,23 @@ void CartesianSpaceController::setPoseCallback(
         sample_posture_ee.setValue(ref);
         task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
 
-        auto ref_ee = task_ee_[ee_id_[ee]]->getReference();
-        auto ref_pos = ref_ee.getValue();
+        quat_des_ = rot_des_;
+        position_end_ = desired_pose_[ee_id_[ee]];
+        /* waypoints_.resize(0);
+         orientation_waypoints_.resize(0);
+         interpolate(h_ee_.translation(), desired_pose_[ee_id_[ee]],
+                     h_ee_.rotation(), rot_des_, orientation_waypoints_,
+                     waypoints_, 0.0, 2.7, 0.1);
+
+         auto ref_ee = task_ee_[ee_id_[ee]]->getReference();
+         auto ref_pos = ref_ee.getValue();*/
+
+        t_curr_ = 0.0;
+        position_start_ = h_ee_.translation();
+        std::cout << "position_start_ " << position_start_ << std::endl;
+        std::cout << "position_end_ " << position_end_ << std::endl;
+        std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
+        position_end_ = desired_pose_[ee_id_[ee]];
 
         geometry_msgs::msg::Pose current_pose;
         current_pose.position.x = h_ee_.translation()[0];
@@ -288,6 +328,7 @@ void CartesianSpaceController::setPoseCallback(
       get_node()->get_logger(), *get_node()->get_clock(), 1000,
       "Controller is not active, the command will be ignored");
   }
+  iteration = 0;
 }
 
 } // namespace tsid_controllers
