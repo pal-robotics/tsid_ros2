@@ -122,6 +122,15 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
       traj_ee_[ee_id_[ee]].computeNext();
     task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
 
+    position_start_ = H_ee_0_[ee_id_[ee]].translation();
+    position_end_ = H_ee_0_[ee_id_[ee]].translation();
+    quat_init_ = H_ee_0_[ee_id_[ee]].rotation();
+    quat_des_ = H_ee_0_[ee_id_[ee]].rotation();
+    rot_des_ = H_ee_0_[ee_id_[ee]].rotation();
+    vel_curr_ = Eigen::Vector3d::Zero();
+    compute_trajectory_params();
+
+
     RCLCPP_INFO(
       get_node()->get_logger(), " Initial position ee %s : %f %f %f",
       ee.c_str(), H_ee_0_[ee_id_[ee]].translation()[0],
@@ -162,16 +171,6 @@ CartesianSpaceController::update(
   auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
-
-      current_waypoint_++;
-
-      if (current_waypoint_ >= waypoints_.size()) {
-        interpolate_ = false;
-        RCLCPP_INFO(get_node()->get_logger(), "Desired position reached");
-      }
-    }
-  }*/
-
 
   geometry_msgs::msg::Pose current_pose;
   Eigen::Quaterniond quat_curr(h_ee_.rotation());
@@ -285,6 +284,8 @@ void CartesianSpaceController::setPoseCallback(
         std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
         position_end_ = desired_pose_[ee_id_[ee]];
 
+        compute_trajectory_params();
+
         geometry_msgs::msg::Pose current_pose;
         current_pose.position.x = h_ee_.translation()[0];
         current_pose.position.y = h_ee_.translation()[1];
@@ -330,28 +331,19 @@ void CartesianSpaceController::setPoseCallback(
   }
   iteration = 0;
 }
+
+void CartesianSpaceController::compute_trajectory_params()
+{
+  a_max = v_max / ( 2 * dt_.seconds());
+  t_acc_ = v_max / a_max;
+  t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
+  un_dir_vec = (position_end_ - position_start_) /
+    (position_end_ - position_start_).norm();
+
+}
+
 void CartesianSpaceController::interpolate(double t_curr)
 {
-  /* waypoints.clear();
-   waypoints_orientations.clear();
-   current_waypoint_ = 0;
-   std::vector<double> t_;
-   for (double i = 0; i <= t1; i += step) {
-     t_.push_back(i);
-   }
-
-   Eigen::Vector3d v = (pf - p0) / (t1 - t0);
-
-   Eigen::Quaterniond quat(actual_rot);
-   Eigen::Quaterniond quat_des(rot_des);
-   for (int i = 0; i < t_.size(); i++) {
-     double Ti = t0;
-     Eigen::Vector3d pos = p0 + v * (t_[i] - Ti);
-     waypoints.push_back(pos);
-     Eigen::Quaterniond quat = quat.slerp(t_[i] / t1, quat_des);
-     waypoints_orientations.push_back(quat);
-   }
-   interpolate_ = true;*/
   if (position_end_ == position_start_ && quat_init_ == quat_des_) {
     position_curr_ = position_end_;
     rot_des_ = quat_init_.toRotationMatrix();
@@ -369,17 +361,8 @@ void CartesianSpaceController::interpolate(double t_curr)
     }
   }
 
-  Eigen::Vector3d un_dir_vec = (position_end_ - position_start_) /
-    (position_end_ - position_start_).norm();
-
   double s = 0;
   double s_dot = 0;
-
-
-  double a_max;
-  a_max = v_max / ( 2 * dt_.seconds());
-  t_acc_ = v_max / a_max;
-  t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
 
   Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_flat_ + 2 * t_acc_), quat_des_);
 

@@ -47,6 +47,9 @@ public:
 
   void setPoseCallback(tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
 
+  void compute_trajectory_params();
+  void interpolate(double t);
+
 protected:
   const auto & getParams() const {return TsidPositionControl::params_;}
 
@@ -63,6 +66,26 @@ private:
   std::vector<std::string> ee_names_;
 
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos;
+  std::vector<Eigen::Vector3d> waypoints_;
+  std::vector<Eigen::Quaterniond> orientation_waypoints_;
+  size_t current_waypoint_ = 0;
+  bool interpolate_ = false;
+  Eigen::Matrix3d rot_des_;
+
+  Eigen::Vector3d position_start_;
+  Eigen::Vector3d position_end_;
+  Eigen::Vector3d position_curr_;
+  Eigen::Quaterniond quat_init_;
+  Eigen::Quaterniond quat_des_;
+  Eigen::Vector3d vel_curr_;
+  Eigen::Vector3d un_dir_vec;
+  double t_acc_ = 0.0;
+  double t_flat_ = 0.0;
+  double t_curr_ = 0.0;
+  double v_max = 0.15;
+  double a_max = 0.0;
+
+  int iteration = 0;
 };
 } // namespace tsid_controllers
 
