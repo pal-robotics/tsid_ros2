@@ -1,0 +1,22 @@
+sin_joint_controller:
+  ros__parameters:
+    type: tsid_controllers/SinJointSpaceController
+    update_rate: 1000
+    
+    joint_state_names:
+      - arm_right_6_joint
+
+    joint_command_names:
+      - arm_right_6_joint
+
+    ee_names:
+      - arm_right_7_link
+
+    interface_name: position
+
+    velocity_scaling: 1.0
+    posture_gain: 100.0 #100 sim
+
+    sin_amplitude: 0.4
+    sin_frequency: 0.25
+    sin_phase: 0.65 # * M_PHY

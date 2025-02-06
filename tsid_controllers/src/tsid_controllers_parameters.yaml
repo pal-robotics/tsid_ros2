@@ -210,3 +210,19 @@ tsid_controllers:
         default_value: 0.0,
         description: "Cartesian orientation gain in yaw direction",
       }
+
+  sin_amplitude: {
+    type: double,
+    default_value: 0.1,
+    description: "Sinusoide amplitude",
+  }  
+  sin_phase: {
+    type: double,
+    default_value: 0.1,
+    description: "Sinusoide phase",
+  }  
+  sin_frequency: {
+    type: double,
+    default_value: 0.1,
+    description: "Sinusoide frequency",
+  }    
