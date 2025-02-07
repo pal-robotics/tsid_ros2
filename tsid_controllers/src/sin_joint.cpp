@@ -39,8 +39,8 @@ controller_interface::CallbackReturn SinJointSpaceController::on_configure(
   // Position command
   initial_position_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
   initial_velocity_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
-  interface_name_ = getParams().interface_name
-  
+  interface_name_ = getParams().interface_name;
+
   sin_amplitude_ = getParams().sin_amplitude; 
   sin_frequency_ = getParams().sin_frequency; 
   sin_phase_ = getParams().sin_phase * M_PI;

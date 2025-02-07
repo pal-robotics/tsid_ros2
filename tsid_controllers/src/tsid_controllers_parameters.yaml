@@ -225,4 +225,40 @@ tsid_controllers:
     type: double,
     default_value: 0.1,
     description: "Sinusoide frequency",
-  }    
+  }
+  
+  parameters_sin:
+    __map_joint_command_names:
+      motor_torque_constant: {
+        type: double,
+        default_value: 0.0,
+        description: "Contains the motor torque constant of the command_joint to transform from torque to current.",
+        read_only: false
+      }
+
+      reduction_ratio: {
+        type: double,
+        default_value: 0.0,
+        description: "Contains the reduction ratio of the command_joint to transform from torque to current.",
+        read_only: false,
+        validation: {
+          gt<>: [0],
+        }
+      }
+
+      static_friction: {
+        type: double,
+        default_value: 0.0,
+        description: "Contains the static friction of the command_joint.",
+        read_only: false,
+      }
+
+      viscous_friction: {
+        type: double,
+        default_value: 0.0,
+        description: "Contains the viscous frictioN of the command_joint.",
+        read_only: false,
+        validation: {
+          gt_eq<>: [0],
+        }
+      }

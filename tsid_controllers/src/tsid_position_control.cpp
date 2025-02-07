@@ -414,6 +414,7 @@ void TsidPositionControl::compute_problem_and_set_command(
   Eigen::VectorXd q_cmd;
   Eigen::VectorXd v_cmd, a;
   Eigen::VectorXd q_int;
+  Eigen::VectorXd tau_cmd = Eigen::VectorXd::Zero(model_.nv - 6);
   q_cmd = q.tail(model_.nq - 7);
 
   if(params_.interface_name == "position"){
@@ -455,6 +456,25 @@ void TsidPositionControl::compute_problem_and_set_command(
 
     q_prev_ = q.tail(model_.nq - 7);
 
+  }else if(params_.interface_name == "effort")
+  {
+    // Solving the problem
+    const auto sol = solver_->solve(solverData);
+
+    tau_cmd = formulation_->getActuatorForces(sol);
+
+    // Transform tau_cmd in effort command
+    //print motor torque constant
+    for (const auto & joint : joint_command_names_) {
+      const auto joint_params = params_.parameters_sin.joint_command_names_map.at(joint);
+
+      for (int i = 0; i < tau_cmd.size(); ++i) {
+        tau_cmd[i] /= (joint_params.motor_torque_constant * joint_params.reduction_ratio);
+        RCLCPP_INFO(get_node()->get_logger(), "TAU CMD %f", tau_cmd[i]);
+      }
+      command_interfaces_[jnt_command_id_[joint]].set_value(tau_cmd[model_.getJointId(joint) - 2]);
+
+    }
   }
   
   std_msgs::msg::Float64MultiArray pub;
