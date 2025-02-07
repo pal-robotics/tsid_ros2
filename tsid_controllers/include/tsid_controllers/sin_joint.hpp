@@ -44,13 +44,15 @@ public:
 
   controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state)
   override;
-  
+
 protected:
   const auto & getParams() const {return TsidPositionControl::params_;}
 
 private:
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr joint_cmd_sub_;
-  Eigen::VectorXd actual_position_;
+  Eigen::VectorXd initial_position_;
+  Eigen::VectorXd initial_velocity_;
+  std::string interface_name_;
   double t_curr_ = 0.0;
   double sin_amplitude_;  // Amplitude 
   double sin_frequency_ ; // Frequency

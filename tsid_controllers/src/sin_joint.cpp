@@ -37,7 +37,9 @@ controller_interface::CallbackReturn SinJointSpaceController::on_configure(
   const rclcpp_lifecycle::State & prev_state)
 {
   // Position command
-  actual_position_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+  initial_position_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+  initial_velocity_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+  interface_name_ = getParams().interface_name
   
   sin_amplitude_ = getParams().sin_amplitude; 
   sin_frequency_ = getParams().sin_frequency; 
@@ -58,7 +60,8 @@ controller_interface::CallbackReturn SinJointSpaceController::on_activate(
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   t_curr_ = 0.0; 
 
-  actual_position_ = state.first.tail(params_.joint_command_names.size());
+  initial_position_ = state.first.tail(params_.joint_command_names.size());
+  initial_velocity_ = state.second.tail(params_.joint_command_names.size());
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -66,23 +69,26 @@ controller_interface::CallbackReturn SinJointSpaceController::on_activate(
 controller_interface::return_type SinJointSpaceController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-
   t_curr_ = t_curr_ + dt_.seconds();
   TsidPositionControl::updateParams();
 
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
-  compute_problem_and_set_command(state.first, state.second); //q and v
 
-   Eigen::VectorXd ref(params_.joint_command_names.size());
+  Eigen::VectorXd ref(params_.joint_command_names.size());
+  Eigen::VectorXd vel_ref(params_.joint_command_names.size());
+
   for (size_t i = 0; i < params_.joint_command_names.size(); ++i) {
-    ref[i] = actual_position_[i] + sin_amplitude_ * sin(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
+      ref[i] =  initial_position_[i] + sin_amplitude_ * sin(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
+      vel_ref[i] = sin_amplitude_ * 2 * M_PI * sin_frequency_ * cos(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
   }
-
   // Set the reference to the joint posture task
   tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
   sample_posture_joint.setValue(ref);
+  sample_posture_joint.setDerivative(vel_ref);
   task_joint_posture_->setReference(sample_posture_joint);
+  
+  compute_problem_and_set_command(state.first, state.second); //q and v
 
   return controller_interface::return_type::OK;
 }

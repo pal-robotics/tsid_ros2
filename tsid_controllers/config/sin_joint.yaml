@@ -12,11 +12,11 @@ sin_joint_controller:
     ee_names:
       - arm_right_7_link
 
-    interface_name: position
+    interface_name: velocity
 
     velocity_scaling: 1.0
     posture_gain: 100.0 #100 sim
 
     sin_amplitude: 0.4
-    sin_frequency: 0.25
-    sin_phase: 0.65 # * M_PHY
+    sin_frequency: 0.5 
+    sin_phase: 0.6 # * M_PHI
