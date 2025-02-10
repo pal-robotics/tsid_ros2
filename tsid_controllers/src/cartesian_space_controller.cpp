@@ -334,11 +334,32 @@ void CartesianSpaceController::setPoseCallback(
 
 void CartesianSpaceController::compute_trajectory_params()
 {
-  a_max = v_max / ( 2 * dt_.seconds());
-  t_acc_ = v_max / a_max;
-  t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
-  un_dir_vec = (position_end_ - position_start_) /
-    (position_end_ - position_start_).norm();
+  t_acc_ = 0.0;
+  t_flat_ = 0.0;
+  a_max = 0.0;
+  scale_ = 1.0;
+
+  if (position_end_ != position_start_) {
+    a_max = v_max / ( 2 * dt_.seconds());
+    t_acc_ = v_max / a_max;
+    t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
+    un_dir_vec = (position_end_ - position_start_) /
+      (position_end_ - position_start_).norm();
+  }
+
+  double t_ang = 0.0;
+  if (quat_init_ != quat_des_) {
+    double dot_product = quat_init_.dot(quat_des_);
+    double theta = 2.0 * std::acos(std::min(1.0, std::abs(dot_product)));
+    t_ang = theta / omega_max;
+  }
+
+  if (2 * t_acc_ + t_flat_ < t_ang) {
+    scale_ = (2 * t_acc_ + t_flat_) / t_ang;
+    t_flat_ = t_ang - 2 * t_acc_;
+    a_max = a_max * scale_;
+  }
+
 
 }
 
@@ -369,13 +390,15 @@ void CartesianSpaceController::interpolate(double t_curr)
   rot_des_ = quat.toRotationMatrix();
   if (t_curr < t_acc_) {
     s = 0.5 * a_max * t_curr * t_curr;
-    s_dot = t_curr;
+    s_dot = a_max * t_curr;
   } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
-    s = v_max * (t_curr - t_acc_ / 2);
-    s_dot = v_max;
+    s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * (t_curr - t_acc_ );
+    s_dot = v_max * scale_;
   } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
-    s = (position_end_ - position_start_).norm() - 0.5 * a_max * (t_flat_ + t_acc_ - t_curr) *
-      (t_flat_ + t_acc_ - t_curr);
+    s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * t_flat_ - 0.5 * a_max *
+      (t_curr - t_flat_ - t_acc_) *
+      (t_curr - t_flat_ - t_acc_);
+    s_dot = v_max * scale_ - a_max * (t_curr - t_flat_ - t_acc_ );
   } else {
     s = (position_end_ - position_start_).norm();
     s_dot = 0;

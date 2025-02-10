@@ -84,7 +84,8 @@ private:
   double t_curr_ = 0.0;
   double v_max = 0.15;
   double a_max = 0.0;
-
+  double omega_max = 2.0;
+  double scale_ = 1.0;
   int iteration = 0;
 };
 } // namespace tsid_controllers
