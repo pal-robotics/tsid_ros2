@@ -208,7 +208,7 @@ TsidVelocityControl::command_interface_configuration() const
 
   std::vector<std::string> command_interfaces_config_names;
   for (const auto & joint : params_.joint_command_names) {
-    const auto full_name = joint + "/position";
+    const auto full_name = joint + "/velocity";
     command_interfaces_config_names.push_back(full_name);
   }
 
@@ -378,10 +378,12 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
   auto q_cmd = q_int.tail(model_.nq - 7);
 
+  auto v_com = v_cmd.tail(model_.nq - 7);
+
   // Setting the command to the joint command interfaces
   for (const auto & joint : joint_command_names_) {
     command_interfaces_[jnt_command_id_[joint]].set_value(
-      q_cmd[model_.getJointId(joint) - 2]);
+      v_com[model_.getJointId(joint) - 2]);
   }
 }
 
