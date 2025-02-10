@@ -268,14 +268,6 @@ void CartesianSpaceController::setPoseCallback(
 
         quat_des_ = rot_des_;
         position_end_ = desired_pose_[ee_id_[ee]];
-        /* waypoints_.resize(0);
-         orientation_waypoints_.resize(0);
-         interpolate(h_ee_.translation(), desired_pose_[ee_id_[ee]],
-                     h_ee_.rotation(), rot_des_, orientation_waypoints_,
-                     waypoints_, 0.0, 2.7, 0.1);
-
-         auto ref_ee = task_ee_[ee_id_[ee]]->getReference();
-         auto ref_pos = ref_ee.getValue();*/
 
         t_curr_ = 0.0;
         position_start_ = h_ee_.translation();
@@ -339,6 +331,7 @@ void CartesianSpaceController::compute_trajectory_params()
   a_max = 0.0;
   scale_ = 1.0;
 
+  // Computing timing parameters of position trajectory
   if (position_end_ != position_start_) {
     a_max = v_max / ( 2 * dt_.seconds());
     t_acc_ = v_max / a_max;
@@ -347,6 +340,7 @@ void CartesianSpaceController::compute_trajectory_params()
       (position_end_ - position_start_).norm();
   }
 
+  // Computing timing parameters of orientation trajectory
   double t_ang = 0.0;
   if (quat_init_ != quat_des_) {
     double dot_product = quat_init_.dot(quat_des_);
@@ -354,6 +348,7 @@ void CartesianSpaceController::compute_trajectory_params()
     t_ang = theta / omega_max;
   }
 
+  // Chek if the orientation trajectory is longer than the position trajectory and computing the scale factor
   if (2 * t_acc_ + t_flat_ < t_ang) {
     scale_ = (2 * t_acc_ + t_flat_) / t_ang;
     t_flat_ = t_ang - 2 * t_acc_;
@@ -365,6 +360,8 @@ void CartesianSpaceController::compute_trajectory_params()
 
 void CartesianSpaceController::interpolate(double t_curr)
 {
+
+  // Check if the trajectory is already reached
   if (position_end_ == position_start_ && quat_init_ == quat_des_) {
     position_curr_ = position_end_;
     rot_des_ = quat_init_.toRotationMatrix();
@@ -385,9 +382,12 @@ void CartesianSpaceController::interpolate(double t_curr)
   double s = 0;
   double s_dot = 0;
 
+  //Computing slerp interpolation for the orientation
   Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_flat_ + 2 * t_acc_), quat_des_);
 
   rot_des_ = quat.toRotationMatrix();
+
+  // Computing the trajectory based on the current interpolation time
   if (t_curr < t_acc_) {
     s = 0.5 * a_max * t_curr * t_curr;
     s_dot = a_max * t_curr;
