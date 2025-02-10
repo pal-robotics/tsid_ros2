@@ -25,11 +25,6 @@ using std::placeholders::_1;
 CartesianSpaceController::CartesianSpaceController()
 : tsid_controllers::TsidPositionControl() {}
 
-controller_interface::CallbackReturn CartesianSpaceController::on_init()
-{
-  return TsidPositionControl::on_init();
-}
-
 controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   const rclcpp_lifecycle::State & prev_state)
 {

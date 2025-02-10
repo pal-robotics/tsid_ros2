@@ -12,13 +12,13 @@ cartesian_vel_controller:
       - arm_right_7_joint
 
     joint_command_names:
-      - safety_controller/arm_right_1_joint
-      - safety_controller/arm_right_2_joint
-      - safety_controller/arm_right_3_joint
-      - safety_controller/arm_right_4_joint
-      - safety_controller/arm_right_5_joint
-      - safety_controller/arm_right_6_joint
-      - safety_controller/arm_right_7_joint
+      - arm_right_1_joint
+      - arm_right_2_joint
+      - arm_right_3_joint
+      - arm_right_4_joint
+      - arm_right_5_joint
+      - arm_right_6_joint
+      - arm_right_7_joint
 
     interface_name: position
 
@@ -27,28 +27,28 @@ cartesian_vel_controller:
 
     velocity_scaling: 1.0
 
-    posture_gain: 0.0
+    posture_gain: 1.0
 
     cartesian_vel_gain:
          arm_right_7_link:
-          kp_x: 0.0
-          kp_y: 0.0
-          kp_z: 0.0
-          kp_roll: 0.0
-          kp_pitch: 0.0
-          kp_yaw: 0.0
-          ki_x: 0.0
-          ki_y: 0.0
-          ki_z: 0.0
-          ki_roll: 0.0
-          ki_pitch: 0.0
-          ki_yaw: 0.0
-          kd_x: 0.0
-          kd_y: 0.0
-          kd_z: 0.0
-          kd_roll: 0.0
-          kd_pitch: 0.0
-          kd_yaw: 0.0
+          kp_x: 250.0
+          kp_y: 250.0
+          kp_z: 250.0
+          kp_roll: 250.0
+          kp_pitch: 250.0
+          kp_yaw: 250.0
+          ki_x: 0.5
+          ki_y: 0.5
+          ki_z: 0.5
+          ki_roll: 0.5
+          ki_pitch: 0.5
+          ki_yaw: 0.5
+          kd_x: 1.0
+          kd_y: 1.0
+          kd_z: 1.0
+          kd_roll: 1.0
+          kd_pitch: 1.0
+          kd_yaw: 1.0
 
 
 

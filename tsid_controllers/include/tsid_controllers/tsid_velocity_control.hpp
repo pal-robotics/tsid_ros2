@@ -12,20 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CARTESIAN_VELOCITY_CONTROLLER_HPP_
-#define CARTESIAN_VELOCITY_CONTROLLER_HPP_
+#ifndef TSID_POSITION_CONTROL_HPP_
+#define TSID_POSITION_CONTROL_HPP_
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "geometry_msgs/msg/pose.hpp"
-#include "tsid_controllers/tsid_velocity_control.hpp"
 #include "hardware_interface/component_parser.hpp"
 #include "pal_utils/better_enums.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
-#include "tsid_controller_msgs/msg/ee_pos.hpp"
-#include "tsid_controllers/tasks/task-cartesian-velocity.hpp"
 #include <controller_interface/controller_interface.hpp>
 #include <hardware_interface/actuator_interface.hpp>
 #include <pinocchio/fwd.hpp>
@@ -37,49 +34,71 @@
 #include <tsid/solvers/solver-HQP-eiquadprog-fast.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog-rt.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
-#include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
-#include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid_controllers_params.hpp>
 
 namespace tsid_controllers
 {
+BETTER_ENUM(Interfaces, int, position = 0, velocity = 1, effort = 2);
 
-class CartesianVelocityController
-  : public TsidVelocityControl
+class TsidVelocityControl : public controller_interface::ControllerInterface
 {
 public:
-  CartesianVelocityController();
+  TsidVelocityControl();
 
+  controller_interface::CallbackReturn on_init() override;
   controller_interface::CallbackReturn
   on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
+  controller_interface::InterfaceConfiguration
+  command_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  state_interface_configuration() const override;
+
   controller_interface::return_type
-  update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  update(const rclcpp::Time & time, const rclcpp::Duration & period) override
+  {
+    return controller_interface::return_type::OK;
+  }
 
   controller_interface::CallbackReturn
   on_activate(const rclcpp_lifecycle::State & previous_state) override;
 
-  void setVelCallback(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
+  controller_interface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
+
+  void DefaultVelocityTasks();
+  void updateParams();
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
+
+  void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
 
 protected:
-  const auto & getParams() const {return TsidVelocityControl::params_;}
+  template<typename T>
+  using InterfaceReferences =
+    std::vector<std::vector<std::reference_wrapper<T>>>;
+  InterfaceReferences<hardware_interface::LoanedStateInterface>
+  joint_state_interfaces_;
+  tsid_controllers::Params params_;
+  std::vector<std::vector<std::string>> state_interface_names_;
+  std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
+  tsid::robots::RobotWrapper * robot_wrapper_;
+  tsid::InverseDynamicsFormulationAccForce * formulation_;
+  std::vector<std::string> joint_names_;
+  pinocchio::Model model_;
+  double v_scaling_;
+  std::vector<std::string> joint_command_names_;
+  std::map<std::string, int> jnt_id_;
+  std::map<std::string, int> jnt_command_id_;
+  rclcpp::Duration dt_;
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
 
 private:
-  std::map<std::string, int> ee_id_;
-  tsid::tasks::TaskJointPosture * task_joint_posture_;
-  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
-  std::vector<tsid::tasks::TaskCartesianVelocity *> task_ee_;
-  std::vector<pinocchio::SE3> H_ee_0_;
-  std::vector<tsid::trajectories::TrajectoryEuclidianConstant> traj_ee_;
-  const tsid::trajectories::TrajectorySample sample_posture_ee_;
-  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr ee_cmd_sub_;
-
-  std::vector<std::string> ee_names_;
-
+  tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
+  tsid::solvers::SolverHQuadProgFast * solver_;
 };
 } // namespace tsid_controllers
 
-#endif // CARTESIAN_VELOCITY_CONTROLLER_HPP_
+#endif // TSID_POSITION_CONTROL_HPP_

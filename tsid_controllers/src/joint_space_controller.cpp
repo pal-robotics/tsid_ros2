@@ -26,11 +26,6 @@ using std::placeholders::_1;
 JointSpaceTsidController::JointSpaceTsidController()
 : tsid_controllers::TsidPositionControl() {}
 
-controller_interface::CallbackReturn JointSpaceTsidController::on_init()
-{
-  return TsidPositionControl::on_init();
-}
-
 controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   const rclcpp_lifecycle::State & prev_state)
 {
@@ -43,11 +38,6 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   return TsidPositionControl::on_configure(prev_state);
 }
 
-controller_interface::CallbackReturn JointSpaceTsidController::on_activate(
-  const rclcpp_lifecycle::State & previous_state)
-{
-  return TsidPositionControl::on_activate(previous_state);
-}
 
 controller_interface::return_type
 JointSpaceTsidController::update(

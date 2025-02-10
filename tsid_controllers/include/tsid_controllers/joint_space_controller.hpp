@@ -33,15 +33,11 @@ class JointSpaceTsidController : public TsidPositionControl
 public:
   JointSpaceTsidController();
 
-  controller_interface::CallbackReturn on_init() override;
   controller_interface::CallbackReturn
   on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
   controller_interface::return_type
   update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
-
-  controller_interface::CallbackReturn
-  on_activate(const rclcpp_lifecycle::State & previous_state) override;
 
   void setPositionCb(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
