@@ -33,6 +33,14 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     return result; // Propagate error if the base configuration fails
   }
 
+  if (getParams().ee_names.empty()) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "The end effector name cannot be empty");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+
   local_frame_ = getParams().local_frame;
 
   if (local_frame_) {

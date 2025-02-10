@@ -93,12 +93,6 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
     }
   }
 
-  if (params_.ee_names.empty()) {
-    RCLCPP_ERROR(
-      get_node()->get_logger(),
-      "The end effector name cannot be empty");
-    return controller_interface::CallbackReturn::ERROR;
-  }
 
   // Create the state and command interfaces
   state_interfaces_.reserve(3 * joint_names_.size());

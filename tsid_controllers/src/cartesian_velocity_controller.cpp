@@ -42,6 +42,13 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     return result; // Propagate error if the base configuration fails
   }
 
+  if (getParams().ee_names.empty()) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "The end effector name cannot be empty");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
   // Storing names of desired end effector
   ee_names_.resize(getParams().ee_names.size());
   H_ee_0_.resize(getParams().ee_names.size());

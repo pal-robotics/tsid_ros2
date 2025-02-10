@@ -29,6 +29,11 @@ JointSpaceVelTsidController::JointSpaceVelTsidController()
 controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
   const rclcpp_lifecycle::State & prev_state)
 {
+  auto result = TsidVelocityControl::on_configure(prev_state);
+  if (result != controller_interface::CallbackReturn::SUCCESS) {
+    return result; // Propagate error if the base configuration fails
+  }
+
   // Position command
   joint_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
@@ -71,11 +76,11 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
     "traj_joint", v0.tail(robot_wrapper_->nv() - 6));
   task_joint_velocity_->setReference(traj_joint_velocity_->computeNext());
 
-  return TsidVelocityControl::on_configure(prev_state);
+  return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn JointSpaceVelTsidController::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+  const rclcpp_lifecycle::State & previous_state)
 {
   auto result = TsidVelocityControl::on_activate(previous_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
