@@ -18,18 +18,21 @@
 #include <pluginlib/class_list_macros.hpp>
 
 using namespace controller_interface;
-namespace tsid_controllers {
+namespace tsid_controllers
+{
 using std::placeholders::_1;
 
 CartesianSpaceController::CartesianSpaceController()
-    : tsid_controllers::TsidPositionControl(), dt_(0, 0) {}
+: tsid_controllers::TsidPositionControl() {}
 
-controller_interface::CallbackReturn CartesianSpaceController::on_init() {
+controller_interface::CallbackReturn CartesianSpaceController::on_init()
+{
   return TsidPositionControl::on_init();
 }
 
 controller_interface::CallbackReturn CartesianSpaceController::on_configure(
-    const rclcpp_lifecycle::State &prev_state) {
+  const rclcpp_lifecycle::State & prev_state)
+{
   auto result = TsidPositionControl::on_configure(prev_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
     return result; // Propagate error if the base configuration fails
@@ -39,11 +42,12 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
   if (local_frame_) {
     RCLCPP_INFO(
-        get_node()->get_logger(),
-        "The reference is considered as expressed in the end effector frame");
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the end effector frame");
   } else {
-    RCLCPP_INFO(get_node()->get_logger(),
-                "The reference is considered as expressed in the base frame");
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the base frame");
   }
 
   // Storing names of desired end effector
@@ -57,24 +61,25 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   }
   // Creating the publisher for the current position
   publisher_curr_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
-      "current_position", 10);
+    "current_position", 10);
 
   // Pose reference callback
   ee_cmd_sub_ =
-      get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
-          "cartesian_space_controller/pose_cmd", 1,
-          std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
+    get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
+    "cartesian_space_controller/pose_cmd", 1,
+    std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
   // print getParams().ee_names.size()
 
   // End effector tasks, one for each end effector in the config
-  for (const auto &ee : ee_names_) {
-    task_ee_.push_back(new tsid::tasks::TaskSE3Equality(
+  for (const auto & ee : ee_names_) {
+    task_ee_.push_back(
+      new tsid::tasks::TaskSE3Equality(
         "task-ee" + ee, *TsidPositionControl::robot_wrapper_, ee));
 
     auto gain = getParams().cartesian_gain.ee_names_map.at(ee);
     Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
     kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
-        gain.kp_yaw;
+      gain.kp_yaw;
     task_ee_[ee_id_[ee]]->Kp(kp_gain);
 
     task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
@@ -88,14 +93,15 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     double transition_time = 0.0;
 
     TsidPositionControl::formulation_->addMotionTask(
-        *task_ee_[ee_id_[ee]], ee_weight, ee_priority, transition_time);
+      *task_ee_[ee_id_[ee]], ee_weight, ee_priority, transition_time);
   }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn CartesianSpaceController::on_activate(
-    const rclcpp_lifecycle::State &previous_state) {
+  const rclcpp_lifecycle::State & previous_state)
+{
   auto result = TsidPositionControl::on_activate(previous_state);
   if (result != controller_interface::CallbackReturn::SUCCESS) {
     return result; // Propagate error if the base configuration fails
@@ -104,33 +110,37 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
   // Setting initial reference for the end effector tasks
   for (auto ee : ee_names_) {
     H_ee_0_[ee_id_[ee]] = robot_wrapper_->framePosition(
-        TsidPositionControl::formulation_->data(),
-        TsidPositionControl::model_.getFrameId(ee));
-    traj_ee_.push_back(tsid::trajectories::TrajectorySE3Constant(
+      TsidPositionControl::formulation_->data(),
+      TsidPositionControl::model_.getFrameId(ee));
+    traj_ee_.push_back(
+      tsid::trajectories::TrajectorySE3Constant(
         "traj_ee", H_ee_0_[ee_id_[ee]]));
     tsid::trajectories::TrajectorySample sample_posture_ee =
-        traj_ee_[ee_id_[ee]].computeNext();
+      traj_ee_[ee_id_[ee]].computeNext();
     task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
 
-    RCLCPP_INFO(get_node()->get_logger(), " Initial position ee %s : %f %f %f",
-                ee.c_str(), H_ee_0_[ee_id_[ee]].translation()[0],
-                H_ee_0_[ee_id_[ee]].translation()[1],
-                H_ee_0_[ee_id_[ee]].translation()[2]);
+    RCLCPP_INFO(
+      get_node()->get_logger(), " Initial position ee %s : %f %f %f",
+      ee.c_str(), H_ee_0_[ee_id_[ee]].translation()[0],
+      H_ee_0_[ee_id_[ee]].translation()[1],
+      H_ee_0_[ee_id_[ee]].translation()[2]);
   }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::return_type
-CartesianSpaceController::update(const rclcpp::Time & /*time*/,
-                                 const rclcpp::Duration & /*period*/) {
+CartesianSpaceController::update(
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/)
+{
   TsidPositionControl::updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
   compute_problem_and_set_command(state.first, state.second); // q and v
   auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
-      TsidPositionControl::formulation_->data(),
-      TsidPositionControl::model_.getFrameId(ee_names_[0]));
+    TsidPositionControl::formulation_->data(),
+    TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
   geometry_msgs::msg::Pose current_pose;
   current_pose.position.x = h_ee_.translation()[0];
@@ -147,22 +157,26 @@ CartesianSpaceController::update(const rclcpp::Time & /*time*/,
 }
 
 void CartesianSpaceController::setPoseCallback(
-    tsid_controller_msgs::msg::EePos::ConstSharedPtr msg) {
+  tsid_controller_msgs::msg::EePos::ConstSharedPtr msg)
+{
   if (get_node()->get_current_state().id() ==
-      lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+    lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
+  {
     for (int i = 0; i < msg->ee_name.size(); i++) {
       if (std::find(ee_names_.begin(), ee_names_.end(), msg->ee_name[i]) ==
-          ee_names_.end()) {
-        RCLCPP_WARN(get_node()->get_logger(),
-                    "End effector %s not found in the list of end effectors, "
-                    "this command will be ignored",
-                    msg->ee_name[i].c_str());
+        ee_names_.end())
+      {
+        RCLCPP_WARN(
+          get_node()->get_logger(),
+          "End effector %s not found in the list of end effectors, "
+          "this command will be ignored",
+          msg->ee_name[i].c_str());
       } else {
         auto ee = msg->ee_name[i];
 
         auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
-            TsidPositionControl::formulation_->data(),
-            TsidPositionControl::model_.getFrameId(ee_names_[i]));
+          TsidPositionControl::formulation_->data(),
+          TsidPositionControl::model_.getFrameId(ee_names_[i]));
 
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
 
@@ -171,20 +185,20 @@ void CartesianSpaceController::setPoseCallback(
           pinocchio::Motion desired_pose;
           desired_pose.setZero();
           desired_pose.linear() << msg->desired_pose[i].position.x,
-              msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
+            msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
           desired_pose = h_ee_.toActionMatrix() * desired_pose.toVector();
 
           // Adding displacement to the desired pose
           desired_pose_[ee_id_[ee]]
-              << h_ee_.translation()[0] + desired_pose.linear()[0],
-              h_ee_.translation()[1] + desired_pose.linear()[1],
-              h_ee_.translation()[2] + desired_pose.linear()[2];
+            << h_ee_.translation()[0] + desired_pose.linear()[0],
+            h_ee_.translation()[1] + desired_pose.linear()[1],
+            h_ee_.translation()[2] + desired_pose.linear()[2];
 
           // Setting the orientation desired
           Eigen::Quaterniond quat(msg->desired_pose[i].orientation.w,
-                                  msg->desired_pose[i].orientation.x,
-                                  msg->desired_pose[i].orientation.y,
-                                  msg->desired_pose[i].orientation.z);
+            msg->desired_pose[i].orientation.x,
+            msg->desired_pose[i].orientation.y,
+            msg->desired_pose[i].orientation.z);
 
           Eigen::Matrix3d rot_des = h_ee_.rotation() * quat.toRotationMatrix();
 
@@ -196,19 +210,19 @@ void CartesianSpaceController::setPoseCallback(
           pinocchio::Motion desired_pose;
           desired_pose.setZero();
           desired_pose.linear() << msg->desired_pose[i].position.x,
-              msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
+            msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
 
           // Adding displacement to the desired pose
           desired_pose_[ee_id_[ee]]
-              << h_ee_.translation()[0] + desired_pose.linear()[0],
-              h_ee_.translation()[1] + desired_pose.linear()[1],
-              h_ee_.translation()[2] + desired_pose.linear()[2];
+            << h_ee_.translation()[0] + desired_pose.linear()[0],
+            h_ee_.translation()[1] + desired_pose.linear()[1],
+            h_ee_.translation()[2] + desired_pose.linear()[2];
 
           // Setting the orientation desired
           Eigen::Quaterniond quat(msg->desired_pose[i].orientation.w,
-                                  msg->desired_pose[i].orientation.x,
-                                  msg->desired_pose[i].orientation.y,
-                                  msg->desired_pose[i].orientation.z);
+            msg->desired_pose[i].orientation.x,
+            msg->desired_pose[i].orientation.y,
+            msg->desired_pose[i].orientation.z);
 
           Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
 
@@ -217,7 +231,7 @@ void CartesianSpaceController::setPoseCallback(
         }
 
         tsid::trajectories::TrajectorySample sample_posture_ee =
-            traj_ee_[ee_id_[ee]].computeNext();
+          traj_ee_[ee_id_[ee]].computeNext();
         sample_posture_ee.setValue(ref);
         task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
 
@@ -238,38 +252,40 @@ void CartesianSpaceController::setPoseCallback(
     }
     for (auto ee : ee_names_) {
       if (std::find(msg->ee_name.begin(), msg->ee_name.end(), ee) ==
-          msg->ee_name.end()) {
+        msg->ee_name.end())
+      {
         auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
-            TsidPositionControl::formulation_->data(),
-            TsidPositionControl::model_.getFrameId(ee));
+          TsidPositionControl::formulation_->data(),
+          TsidPositionControl::model_.getFrameId(ee));
 
         // Setting the reference
         Eigen::Vector3d pos_ = h_ee_.translation();
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
         ref.head(3) = pos_;
         ref.tail(9) << h_ee_.rotation()(0, 0), h_ee_.rotation()(0, 1),
-            h_ee_.rotation()(0, 2), h_ee_.rotation()(1, 0),
-            h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
-            h_ee_.rotation()(2, 0), h_ee_.rotation()(2, 1),
-            h_ee_.rotation()(
-                2, 2); // useless because mask not taking orientation, but
+          h_ee_.rotation()(0, 2), h_ee_.rotation()(1, 0),
+          h_ee_.rotation()(1, 1), h_ee_.rotation()(1, 2),
+          h_ee_.rotation()(2, 0), h_ee_.rotation()(2, 1),
+          h_ee_.rotation()(
+          2, 2);       // useless because mask not taking orientation, but
                        // required from tsid to put at least identity
 
         tsid::trajectories::TrajectorySample sample_posture_ee =
-            traj_ee_[ee_id_[ee]].computeNext();
+          traj_ee_[ee_id_[ee]].computeNext();
         sample_posture_ee.setValue(ref);
         task_ee_[ee_id_[ee]]->setReference(sample_posture_ee);
       }
     }
   } else {
     RCLCPP_WARN_THROTTLE(
-        get_node()->get_logger(), *get_node()->get_clock(), 1000,
-        "Controller is not active, the command will be ignored");
+      get_node()->get_logger(), *get_node()->get_clock(), 1000,
+      "Controller is not active, the command will be ignored");
   }
 }
 
 } // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
 
-PLUGINLIB_EXPORT_CLASS(tsid_controllers::CartesianSpaceController,
-                       controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(
+  tsid_controllers::CartesianSpaceController,
+  controller_interface::ControllerInterface)

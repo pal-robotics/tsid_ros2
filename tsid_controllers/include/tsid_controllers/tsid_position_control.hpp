@@ -41,16 +41,18 @@
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid_controllers_params.hpp>
 
-namespace tsid_controllers {
+namespace tsid_controllers
+{
 BETTER_ENUM(Interfaces, int, position = 0, velocity = 1, effort = 2);
 
-class TsidPositionControl : public controller_interface::ControllerInterface {
+class TsidPositionControl : public controller_interface::ControllerInterface
+{
 public:
   TsidPositionControl();
 
   controller_interface::CallbackReturn on_init() override;
   controller_interface::CallbackReturn
-  on_configure(const rclcpp_lifecycle::State &previous_state) override;
+  on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
   controller_interface::InterfaceConfiguration
   command_interface_configuration() const override;
@@ -58,15 +60,16 @@ public:
   state_interface_configuration() const override;
 
   controller_interface::return_type
-  update(const rclcpp::Time &time, const rclcpp::Duration &period) override {
+  update(const rclcpp::Time & time, const rclcpp::Duration & period) override
+  {
     return controller_interface::return_type::OK;
-  };
+  }
 
   controller_interface::CallbackReturn
-  on_activate(const rclcpp_lifecycle::State &previous_state) override;
+  on_activate(const rclcpp_lifecycle::State & previous_state) override;
 
   controller_interface::CallbackReturn
-  on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
+  on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
 
   void DefaultPositionTasks();
   void updateParams();
@@ -75,31 +78,31 @@ public:
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
 
 protected:
-  template <typename T>
+  template<typename T>
   using InterfaceReferences =
-      std::vector<std::vector<std::reference_wrapper<T>>>;
+    std::vector<std::vector<std::reference_wrapper<T>>>;
   InterfaceReferences<hardware_interface::LoanedStateInterface>
-      joint_state_interfaces_;
+  joint_state_interfaces_;
   tsid_controllers::Params params_;
   std::vector<std::vector<std::string>> state_interface_names_;
   std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
-  tsid::robots::RobotWrapper *robot_wrapper_;
-  tsid::InverseDynamicsFormulationAccForce *formulation_;
+  tsid::robots::RobotWrapper * robot_wrapper_;
+  tsid::InverseDynamicsFormulationAccForce * formulation_;
   std::vector<std::string> joint_names_;
   pinocchio::Model model_;
   double v_scaling_;
   std::vector<std::string> joint_command_names_;
   std::map<std::string, int> jnt_id_;
   std::map<std::string, int> jnt_command_id_;
-  tsid::tasks::TaskJointPosture *task_joint_posture_;
+  tsid::tasks::TaskJointPosture * task_joint_posture_;
+  rclcpp::Duration dt_;
 
 private:
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
 
-  rclcpp::Duration dt_;
-  tsid::trajectories::TrajectoryEuclidianConstant *traj_joint_posture_;
-  tsid::tasks::TaskJointPosVelAccBounds *task_joint_bounds_;
-  tsid::solvers::SolverHQuadProgFast *solver_;
+  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
+  tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
+  tsid::solvers::SolverHQuadProgFast * solver_;
 };
 } // namespace tsid_controllers
 

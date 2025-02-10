@@ -28,26 +28,28 @@
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid_controllers_params.hpp>
 
-namespace tsid_controllers {
-class CartesianSpaceController : public TsidPositionControl {
+namespace tsid_controllers
+{
+class CartesianSpaceController : public TsidPositionControl
+{
 
 public:
   CartesianSpaceController();
 
   controller_interface::CallbackReturn on_init() override;
   controller_interface::CallbackReturn
-  on_configure(const rclcpp_lifecycle::State &previous_state) override;
+  on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
   controller_interface::return_type
-  update(const rclcpp::Time &time, const rclcpp::Duration &period) override;
+  update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
   controller_interface::CallbackReturn
-  on_activate(const rclcpp_lifecycle::State &previous_state) override;
+  on_activate(const rclcpp_lifecycle::State & previous_state) override;
 
   void setPoseCallback(tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
 
 protected:
-  const auto &getParams() const { return TsidPositionControl::params_; }
+  const auto & getParams() const {return TsidPositionControl::params_;}
 
 private:
   std::map<std::string, int> ee_id_;
@@ -56,7 +58,6 @@ private:
   std::vector<pinocchio::SE3> H_ee_0_;
   std::vector<tsid::trajectories::TrajectorySE3Constant> traj_ee_;
   const tsid::trajectories::TrajectorySample sample_posture_ee_;
-  rclcpp::Duration dt_;
   rclcpp::Subscription<tsid_controller_msgs::msg::EePos>::SharedPtr ee_cmd_sub_;
   std::vector<Eigen::Vector3d> desired_pose_;
 

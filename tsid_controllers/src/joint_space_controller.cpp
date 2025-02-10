@@ -19,35 +19,41 @@
 
 using namespace controller_interface;
 
-namespace tsid_controllers {
+namespace tsid_controllers
+{
 using std::placeholders::_1;
 
 JointSpaceTsidController::JointSpaceTsidController()
-    : tsid_controllers::TsidPositionControl(), dt_(0, 0) {}
+: tsid_controllers::TsidPositionControl() {}
 
-controller_interface::CallbackReturn JointSpaceTsidController::on_init() {
+controller_interface::CallbackReturn JointSpaceTsidController::on_init()
+{
   return TsidPositionControl::on_init();
 }
 
 controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
-    const rclcpp_lifecycle::State &prev_state) {
+  const rclcpp_lifecycle::State & prev_state)
+{
   // Position command
   joint_cmd_sub_ =
-      get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-          "tsid_controllers/joint_position_cmd", 1,
-          std::bind(&JointSpaceTsidController::setPositionCb, this, _1));
+    get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
+    "tsid_controllers/joint_position_cmd", 1,
+    std::bind(&JointSpaceTsidController::setPositionCb, this, _1));
 
   return TsidPositionControl::on_configure(prev_state);
 }
 
 controller_interface::CallbackReturn JointSpaceTsidController::on_activate(
-    const rclcpp_lifecycle::State &previous_state) {
+  const rclcpp_lifecycle::State & previous_state)
+{
   return TsidPositionControl::on_activate(previous_state);
 }
 
 controller_interface::return_type
-JointSpaceTsidController::update(const rclcpp::Time & /*time*/,
-                                 const rclcpp::Duration & /*period*/) {
+JointSpaceTsidController::update(
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/)
+{
   TsidPositionControl::updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
@@ -56,10 +62,12 @@ JointSpaceTsidController::update(const rclcpp::Time & /*time*/,
 }
 
 void JointSpaceTsidController::setPositionCb(
-    std_msgs::msg::Float64MultiArray::ConstSharedPtr msg) {
+  std_msgs::msg::Float64MultiArray::ConstSharedPtr msg)
+{
   if (msg->data.size() != params_.joint_command_names.size()) {
-    RCLCPP_ERROR(get_node()->get_logger(),
-                 "Received joint position command with incorrect size");
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      "Received joint position command with incorrect size");
     return;
   }
 
@@ -69,13 +77,15 @@ void JointSpaceTsidController::setPositionCb(
   for (auto joint : joint_command_names_) {
 
     if (msg->data[jnt_command_id_[joint]] >
-            upper_limits[model_.getJointId(joint) - 2] ||
-        msg->data[jnt_command_id_[joint]] <
-            lower_limits[model_.getJointId(joint) - 2]) {
-      RCLCPP_ERROR(get_node()->get_logger(),
-                   "Joint %s command out of boundaries! The motion will not be "
-                   "performed!",
-                   joint.c_str());
+      upper_limits[model_.getJointId(joint) - 2] ||
+      msg->data[jnt_command_id_[joint]] <
+      lower_limits[model_.getJointId(joint) - 2])
+    {
+      RCLCPP_ERROR(
+        get_node()->get_logger(),
+        "Joint %s command out of boundaries! The motion will not be "
+        "performed!",
+        joint.c_str());
       return;
     }
   }
@@ -94,12 +104,14 @@ void JointSpaceTsidController::setPositionCb(
 
   auto get_ref = task_joint_posture_->getReference();
   auto ref_pos = get_ref.getValue();
-  RCLCPP_INFO(get_node()->get_logger(), " Reference position joints : %f ",
-              ref_pos[0]);
+  RCLCPP_INFO(
+    get_node()->get_logger(), " Reference position joints : %f ",
+    ref_pos[0]);
 }
 
 } // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
 
-PLUGINLIB_EXPORT_CLASS(tsid_controllers::JointSpaceTsidController,
-                       controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(
+  tsid_controllers::JointSpaceTsidController,
+  controller_interface::ControllerInterface)
