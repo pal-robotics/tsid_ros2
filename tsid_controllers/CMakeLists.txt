@@ -13,7 +13,6 @@ ament_auto_find_build_dependencies()
 find_package(pinocchio REQUIRED)
 find_package(tsid_vendor REQUIRED)
 
-
 generate_parameter_library(tsid_controllers_params
   src/tsid_controllers_parameters.yaml
 )

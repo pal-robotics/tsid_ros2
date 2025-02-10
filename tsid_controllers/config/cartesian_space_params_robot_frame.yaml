@@ -1,7 +1,7 @@
 cartesian_space_controller:
   ros__parameters:
     type: tsid_controllers/CartesianSpaceController
-    update_rate: 1000
+    update_rate: 25
   
     local_frame: false
      
@@ -93,5 +93,4 @@ cartesian_space_controller:
           kp_roll: 70.0
           kp_pitch: 70.0
           kp_yaw: 70.0
-          
 
