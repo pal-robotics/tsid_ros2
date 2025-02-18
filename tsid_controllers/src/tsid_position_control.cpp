@@ -171,9 +171,7 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
     model_,
     tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
 
-  formulation_ = new tsid::InverseDynamicsFormulationAccForce(
-    "tsid", *robot_wrapper_, true);
-
+  formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
   first_tsid_iter_ = true;
 
   DefaultPositionTasks();
@@ -190,6 +188,8 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   publisher_curr_pos =
     get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_pos", 10);
 
+  publisher_curr_curr =
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_curr", 10);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -396,7 +396,9 @@ void TsidPositionControl::DefaultPositionTasks()
   v_scaling_ = params_.velocity_scaling;
   Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_max;
+  Eigen::VectorXd a_max = params_.acc_lim * Eigen::VectorXd::Ones(model_.nv - 6);
   task_joint_bounds_->setVelocityBounds(v_max);
+  //task_joint_bounds_->setAccelerationBounds(a_max);
   formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 
 }
@@ -461,6 +463,15 @@ void TsidPositionControl::compute_problem_and_set_command(
     // Solving the problem
     const auto sol = solver_->solve(solverData);
 
+    a = formulation_->getAccelerations(sol);
+    v_cmd = v + a * 0.5 * dt_.seconds();
+
+    // Integrating velocity to get position
+    q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
+
+    q_cmd = q_int.tail(model_.nq - 7);
+
+
     tau_cmd = formulation_->getActuatorForces(sol);
 
     // Transform tau_cmd in effort command
@@ -470,7 +481,6 @@ void TsidPositionControl::compute_problem_and_set_command(
 
       for (int i = 0; i < tau_cmd.size(); ++i) {
         tau_cmd[i] /= (joint_params.motor_torque_constant * joint_params.reduction_ratio);
-        RCLCPP_INFO(get_node()->get_logger(), "TAU CMD %f", tau_cmd[i]);
       }
       command_interfaces_[jnt_command_id_[joint]].set_value(tau_cmd[model_.getJointId(joint) - 2]);
 
@@ -492,6 +502,14 @@ void TsidPositionControl::compute_problem_and_set_command(
   }
 
   publisher_curr_pos->publish(pub_pos);
+
+  std_msgs::msg::Float64MultiArray pub_curr;
+
+  for (int i = 0; i < tau_cmd.size(); i++) {
+    pub_curr.data.push_back(tau_cmd[i]);
+  }
+
+  publisher_curr_curr->publish(pub_curr);
   q_prev_ = q.tail(model_.nq - 7);
 }
 
