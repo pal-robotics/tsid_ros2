@@ -72,7 +72,7 @@ public:
   on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
 
   void DefaultPositionTasks();
-  void updateParams();
+  virtual void updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
 
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);

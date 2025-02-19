@@ -45,6 +45,8 @@ public:
 
   void setVelocityCb(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
+  void updateParams() override;
+
 private:
   tsid::tasks::TaskJointVel * task_joint_velocity_;
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_velocity_;

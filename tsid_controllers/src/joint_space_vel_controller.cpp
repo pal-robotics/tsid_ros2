@@ -146,6 +146,34 @@ void JointSpaceVelTsidController::setVelocityCb(
 
 }
 
+void JointSpaceVelTsidController::updateParams()
+{
+  TsidVelocityControl::updateParams();
+
+  Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd ki = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+
+  for (auto joint : joint_command_names_) {
+    auto gain = params_.joint_vel_gain.joint_state_names_map.at(joint);
+
+    if (gain.kp < 0 || gain.kd < 0 || gain.ki < 0) {
+      RCLCPP_ERROR(get_node()->get_logger(), "The gains must be positive");
+      return;
+    }
+
+    kp[jnt_command_id_[joint]] = gain.kp;
+    kd[jnt_command_id_[joint]] = gain.kd;
+    ki[jnt_command_id_[joint]] = gain.ki;
+  }
+
+  task_joint_velocity_->Kp(kp);
+  task_joint_velocity_->Kd(kd);
+  task_joint_velocity_->Ki(ki);
+
+}
+
+
 } // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
 

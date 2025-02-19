@@ -152,7 +152,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
 
   double a_max;
 
-  a_max = v_max / ( 2 * dt_.seconds());
+  a_max = 20.0;
   t_acc_ = v_max / a_max;
 
 

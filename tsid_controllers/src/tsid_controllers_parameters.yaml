@@ -33,6 +33,12 @@ tsid_controllers:
 
   }
 
+  ee_vmax: {
+    type: double,
+    default_value: 0.15,
+    description: "Maximum velocity for the end-effector",
+  }
+
   local_frame: {
     type: bool, 
     default_value: false,

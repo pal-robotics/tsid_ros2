@@ -47,6 +47,7 @@ public:
 
   void setPoseCallback(tsid_controller_msgs::msg::EePos::ConstSharedPtr msg);
 
+  void updateParams() override;
   void compute_trajectory_params();
   void interpolate(double t);
 

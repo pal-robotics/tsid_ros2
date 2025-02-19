@@ -99,6 +99,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
       *task_ee_[ee_id_[ee]], ee_weight, ee_priority, transition_time);
   }
 
+  v_max = params_.ee_vmax;
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -146,6 +148,7 @@ CartesianSpaceController::update(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
+  t_curr_ = t_curr_ + dt_.seconds();
   TsidPositionControl::updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
@@ -408,6 +411,14 @@ void CartesianSpaceController::interpolate(double t_curr)
 
   position_curr_ = position_start_ + s * un_dir_vec;
   vel_curr_ = s_dot * un_dir_vec;
+
+}
+
+void CartesianSpaceController::updateParams()
+{
+  TsidPositionControl::updateParams();
+
+  v_max = params_.ee_vmax;
 
 }
 
