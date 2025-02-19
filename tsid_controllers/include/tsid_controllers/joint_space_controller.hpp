@@ -46,6 +46,16 @@ public:
 private:
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
     joint_cmd_sub_;
+  double t_acc_ = 0.0;
+  double t_flat_ = 0.0;
+  double t_curr_ = 0.0;
+  double v_max = 2.5;
+
+  Eigen::VectorXd position_start_;
+  Eigen::VectorXd position_end_;
+  Eigen::VectorXd position_curr_;
+  Eigen::VectorXd vel_curr_;
+
 };
 } // namespace tsid_controllers
 

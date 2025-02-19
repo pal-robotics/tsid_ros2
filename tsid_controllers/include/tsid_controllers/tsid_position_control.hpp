@@ -103,6 +103,12 @@ private:
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
   tsid::solvers::SolverHQuadProgFast * solver_;
+
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos;
+  Eigen::VectorXd q_prev_;
+
+
 };
 } // namespace tsid_controllers
 
