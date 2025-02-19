@@ -350,7 +350,7 @@ void TsidPositionControl::DefaultPositionTasks()
       RCLCPP_ERROR(
         get_node()->get_logger(),
         "The gains for joint position task must be positive");
-      return controller_interface::CallbackReturn::ERROR;
+      return;
     }
 
     kp[jnt_command_id_[joint]] = gain.kp;
@@ -402,16 +402,18 @@ void TsidPositionControl::DefaultPositionTasks()
 void TsidPositionControl::compute_problem_and_set_command(
   const Eigen::VectorXd q, const Eigen::VectorXd v)
 {
+  Eigen::VectorXd v_ = Eigen::VectorXd::Zero(model_.nv);
+  v_.tail(model_.nq - 7) = (q.tail(model_.nq - 7) - q_prev_) / dt_.seconds();
 
   // Computing the problem data
   const tsid::solvers::HQPData solverData =
-    formulation_->computeProblemData(0.0, q, v);
+    formulation_->computeProblemData(0.0, q, v_);
 
   // Solving the problem
   const auto sol = solver_->solve(solverData);
   // Integrating acceleration to get velocity
   Eigen::VectorXd a = formulation_->getAccelerations(sol);
-  Eigen::VectorXd v_cmd = v + a * dt_.seconds();
+  Eigen::VectorXd v_cmd = v_ + a * dt_.seconds();
 
   // Integrating velocity to get position
   auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
@@ -423,6 +425,9 @@ void TsidPositionControl::compute_problem_and_set_command(
     command_interfaces_[jnt_command_id_[joint]].set_value(
       q_cmd[model_.getJointId(joint) - 2]);
   }
+
+  q_prev_ = q.tail(model_.nq - 7);
+
 }
 
 } // namespace tsid_controllers

@@ -29,6 +29,11 @@ JointSpaceTsidController::JointSpaceTsidController()
 controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   const rclcpp_lifecycle::State & prev_state)
 {
+  position_start_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+  position_end_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+  position_curr_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+  vel_curr_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+
   // Position command
   joint_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
@@ -38,11 +43,25 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   return TsidPositionControl::on_configure(prev_state);
 }
 
+controller_interface::CallbackReturn JointSpaceTsidController::on_activate(
+  const rclcpp_lifecycle::State & previous_state)
+{
+  auto result = TsidPositionControl::on_activate(previous_state);
+  if (result != controller_interface::CallbackReturn::SUCCESS) {
+    return result; // Propagate error if the base configuration fails
+  }
 
-controller_interface::return_type
-JointSpaceTsidController::update(
-  const rclcpp::Time & /*time*/,
-  const rclcpp::Duration & /*period*/)
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+
+  position_start_ = state.first.tail(params_.joint_command_names.size());
+
+  position_end_ = position_start_;
+
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+controller_interface::return_type JointSpaceTsidController::update(
+  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
 
   t_curr_ = t_curr_ + dt_.seconds();
@@ -51,7 +70,16 @@ JointSpaceTsidController::update(
 
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
-  compute_problem_and_set_command(state.first, state.second); // q and v
+
+  interpolate(t_curr_);
+
+  tsid::trajectories::TrajectorySample sample_posture_joint(position_curr_.size());
+  sample_posture_joint.setValue(position_curr_);
+
+  task_joint_posture_->setReference(sample_posture_joint);
+
+
+  compute_problem_and_set_command(state.first, state.second); //q and v
   return controller_interface::return_type::OK;
 }
 
