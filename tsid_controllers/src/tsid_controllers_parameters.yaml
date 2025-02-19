@@ -45,14 +45,21 @@ tsid_controllers:
     description: "Scaling factor for the velocity command",
   }
 
-  posture_gain: {
-    type: double,
-    default_value: 50.0,
-    description: "Gain for the posture task",
-  }
+  joint_pos_gain:
+    __map_joint_state_names:
+      kp: {
+        type: double,
+        default_value: 0.0,
+        description: "Joint position gain",
+      }
+      kd: {
+        type: double,
+        default_value: 0.0,
+        description: "Joint position damping",
+      }
 
   joint_vel_gain: 
-    __map_joint_state_names:
+    __map_joint_command_names:
       kp: {
         type: double,
         default_value: 0.0,

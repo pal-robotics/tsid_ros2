@@ -307,10 +307,28 @@ void TsidPositionControl::updateParams()
     Eigen::VectorXd v_max =
       v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
     task_joint_bounds_->setVelocityBounds(v_max);
-    task_joint_posture_->Kp(
-      params_.posture_gain *
-      Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6));
-    task_joint_posture_->Kd(2.0 * task_joint_posture_->Kp().cwiseSqrt());
+
+    //Taking gain for joint posture task
+    Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+    Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+
+    for (auto joint : joint_command_names_) {
+      auto gain = params_.joint_pos_gain.joint_command_names_map.at(joint);
+
+      if (gain.kp < 0 || gain.kd < 0) {
+        RCLCPP_ERROR(
+          get_node()->get_logger(),
+          "The gains for joint position task must be positive");
+        return;
+      }
+
+      kp[jnt_command_id_[joint]] = gain.kp;
+      kd[jnt_command_id_[joint]] = gain.kd;
+    }
+
+
+    task_joint_posture_->Kp(kp);
+    task_joint_posture_->Kd(kd);
   }
 }
 
@@ -320,9 +338,25 @@ void TsidPositionControl::DefaultPositionTasks()
   // Joint Posture Task
   task_joint_posture_ =
     new tsid::tasks::TaskJointPosture("task-joint-posture", *robot_wrapper_);
-  Eigen::VectorXd kp =
-    params_.posture_gain * Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6);
-  Eigen::VectorXd kd = 2.0 * kp.cwiseSqrt();
+
+  //Taking gain for joint posture task
+  Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+  Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
+
+  for (auto joint : joint_command_names_) {
+    auto gain = params_.joint_pos_gain.joint_command_names_map.at(joint);
+
+    if (gain.kp < 0 || gain.kd < 0) {
+      RCLCPP_ERROR(
+        get_node()->get_logger(),
+        "The gains for joint position task must be positive");
+      return controller_interface::CallbackReturn::ERROR;
+    }
+
+    kp[jnt_command_id_[joint]] = gain.kp;
+    kd[jnt_command_id_[joint]] = gain.kd;
+  }
+
   task_joint_posture_->Kp(kp);
   task_joint_posture_->Kd(kd);
   int posture_priority = 1; // 0 constraint, 1 cost function
