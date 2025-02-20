@@ -377,6 +377,7 @@ void TsidPositionControl::DefaultPositionTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds", *robot_wrapper_, dt_.seconds(), true);
+  task_joint_bounds_->setTimeStep(dt_.seconds());
   Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
   Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
 
@@ -416,7 +417,9 @@ void TsidPositionControl::compute_problem_and_set_command(
   Eigen::VectorXd v_cmd = v + a * dt_.seconds();
 
   // Integrating velocity to get position
-  auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
+  auto q_int = pinocchio::integrate(
+    model_, q,
+    (M_PI / (180 * dt_.seconds())) * v_cmd * dt_.seconds());
 
   auto q_cmd = q_int.tail(model_.nq - 7);
 

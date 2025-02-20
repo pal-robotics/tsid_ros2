@@ -1,7 +1,7 @@
 joint_space_vel_controller:
   ros__parameters:
     type: tsid_controllers/JointSpaceVelTsidController
-    update_rate: 25
+    update_rate: 1000
     
     joint_state_names:
       - arm_right_1_joint

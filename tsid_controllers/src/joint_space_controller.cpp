@@ -75,6 +75,7 @@ controller_interface::return_type JointSpaceTsidController::update(
 
   tsid::trajectories::TrajectorySample sample_posture_joint(position_curr_.size());
   sample_posture_joint.setValue(position_curr_);
+  sample_posture_joint.setDerivative(vel_curr_);
 
   task_joint_posture_->setReference(sample_posture_joint);
 
@@ -151,32 +152,37 @@ void JointSpaceTsidController::interpolate(double t_curr)
   }
 
   double a_max;
-
-  a_max = 20.0;
-  t_acc_ = v_max / a_max;
+  double v_max_ = params_.velocity_scaling * v_max;
+  a_max = v_max_ / ( 2 * dt_.seconds());
+  t_acc_ = v_max_ / a_max;
 
 
   double s = 0;
   double s_dot = 0;
 
   t_flat_ =
-    ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max * t_acc_) /
-    v_max;
+    ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max_ * t_acc_) /
+    v_max_;
 
+  // Computation of a trapezoidal trajectory
   for (auto joint : params_.joint_command_names) {
     if (t_curr < t_acc_) {
       s = 0.5 * a_max * t_curr * t_curr;
-      s_dot = t_curr;
+      s_dot = a_max * t_curr;
     } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
-      s = v_max * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) * (t_curr - t_acc_ / 2);
-      s_dot = v_max * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+      s = 0.5 * a_max * t_acc_ * t_acc_ + v_max_ *
+        ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) * (t_curr - t_acc_ );
+      s_dot = v_max_ * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
         ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]));
     } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
       s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) -
         0.5 * a_max *
-        (t_flat_ + t_acc_ - t_curr) *
-        (t_flat_ + t_acc_ - t_curr);
+        (t_flat_ + 2 * t_acc_ - t_curr) *
+        (t_flat_ + 2 * t_acc_ - t_curr);
+      s_dot = v_max_ * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) - a_max *
+        (t_curr - t_flat_ - t_acc_);
     } else {
       s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]);
       s_dot = 0;
