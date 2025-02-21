@@ -173,6 +173,8 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   formulation_ = new tsid::InverseDynamicsFormulationAccForce(
     "tsid", *robot_wrapper_, true);
 
+  first_tsid_iter_ = true;
+
   DefaultPositionTasks();
 
   // Initializing solver
@@ -184,10 +186,10 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
 
 
   publisher_curr_vel =
-    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("current_vel", 10);
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("cmd_vel", 10);
 
   publisher_curr_pos =
-    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("current_pos", 10);
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("cmd_pos", 10);
 
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -381,11 +383,6 @@ void TsidPositionControl::DefaultPositionTasks()
   Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
   Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
 
-  for (int i = 0; i < q_max.size(); i++) {
-    std::cout << "q_max" << q_max[i] << std::endl;
-    std::cout << "q_min" << q_min[i] << std::endl;
-  }
-
   task_joint_bounds_->setPositionBounds(q_min, q_max);
 
   int bounds_priority = 0; // 0 constraint, 1 cost function
@@ -393,7 +390,6 @@ void TsidPositionControl::DefaultPositionTasks()
   // Joint velocity bounds
   v_scaling_ = params_.velocity_scaling;
   Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
-  Eigen::VectorXd v_min = -v_max;
   task_joint_bounds_->setVelocityBounds(v_max);
   formulation_->addMotionTask(
     *task_joint_bounds_, bounds_weight,
@@ -416,12 +412,16 @@ void TsidPositionControl::compute_problem_and_set_command(
   Eigen::VectorXd a = formulation_->getAccelerations(sol);
   Eigen::VectorXd v_cmd = v + a * dt_.seconds();
 
-  // Integrating velocity to get position
-  auto q_int = pinocchio::integrate(
-    model_, q,
-    (M_PI / (180 * dt_.seconds())) * v_cmd * dt_.seconds());
+  if(first_tsid_iter_) {
+    q_int_ = q;
+    first_tsid_iter_ = false;
+  }
 
-  auto q_cmd = q_int.tail(model_.nq - 7);
+  // Integrating velocity to get position
+  q_int_ = pinocchio::integrate(
+    model_, q_int_, v_cmd * dt_.seconds());
+
+  auto q_cmd = q_int_.tail(model_.nq - 7);
 
   // Setting the command to the joint command interfaces
   for (const auto & joint : joint_command_names_) {
@@ -430,7 +430,15 @@ void TsidPositionControl::compute_problem_and_set_command(
   }
 
   q_prev_ = q.tail(model_.nq - 7);
+  std_msgs::msg::Float64MultiArray msg_pos;
+  std_msgs::msg::Float64MultiArray msg_vel;
 
+  for (int i = 0; i < q_cmd.size(); ++i) {
+    msg_pos.data.push_back(q_cmd[i]);
+    msg_vel.data.push_back(v_cmd.tail(model_.nv - 6)[i]);
+  }
+  publisher_curr_pos->publish(msg_pos);
+  publisher_curr_vel->publish(msg_vel);
 }
 
 } // namespace tsid_controllers

@@ -107,9 +107,10 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos;
   Eigen::VectorXd q_prev_;
+  Eigen::VectorXd q_int_;
+  bool first_tsid_iter_;
 
-
-};
+  };
 } // namespace tsid_controllers
 
 #endif // TSID_POSITION_CONTROL_HPP_
