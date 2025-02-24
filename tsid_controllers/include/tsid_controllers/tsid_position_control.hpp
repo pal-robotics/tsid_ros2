@@ -111,7 +111,7 @@ private:
   Eigen::VectorXd q_int_;
   bool first_tsid_iter_;
 
-  };
+};
 } // namespace tsid_controllers
 
 #endif // TSID_POSITION_CONTROL_HPP_

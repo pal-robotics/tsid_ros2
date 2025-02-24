@@ -41,8 +41,8 @@ controller_interface::CallbackReturn SinJointSpaceController::on_configure(
   initial_velocity_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
   interface_name_ = getParams().interface_name;
 
-  sin_amplitude_ = getParams().sin_amplitude; 
-  sin_frequency_ = getParams().sin_frequency; 
+  sin_amplitude_ = getParams().sin_amplitude;
+  sin_frequency_ = getParams().sin_frequency;
   sin_phase_ = getParams().sin_phase * M_PI;
 
   return TsidPositionControl::on_configure(prev_state);
@@ -58,7 +58,7 @@ controller_interface::CallbackReturn SinJointSpaceController::on_activate(
   }
 
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
-  t_curr_ = 0.0; 
+  t_curr_ = 0.0;
 
   initial_position_ = state.first.tail(params_.joint_command_names.size());
   initial_velocity_ = state.second.tail(params_.joint_command_names.size());
@@ -71,8 +71,8 @@ controller_interface::return_type SinJointSpaceController::update(
 {
   t_curr_ = t_curr_ + dt_.seconds();
   TsidPositionControl::updateParams();
-  sin_amplitude_ = getParams().sin_amplitude; 
-  sin_frequency_ = getParams().sin_frequency; 
+  sin_amplitude_ = getParams().sin_amplitude;
+  sin_frequency_ = getParams().sin_frequency;
   sin_phase_ = getParams().sin_phase * M_PI;
 
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
@@ -82,8 +82,10 @@ controller_interface::return_type SinJointSpaceController::update(
   Eigen::VectorXd vel_ref(params_.joint_command_names.size());
 
   for (size_t i = 0; i < params_.joint_command_names.size(); ++i) {
-      ref[i] =  initial_position_[i] + sin_amplitude_ * sin(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
-      vel_ref[i] = sin_amplitude_ * 2 * M_PI * sin_frequency_ * cos(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
+    ref[i] = initial_position_[i] + sin_amplitude_ * sin(
+      2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
+    vel_ref[i] = sin_amplitude_ * 2 * M_PI * sin_frequency_ * cos(
+      2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
   }
 
   // Set the reference to the joint posture task
@@ -91,7 +93,7 @@ controller_interface::return_type SinJointSpaceController::update(
   sample_posture_joint.setValue(ref);
   sample_posture_joint.setDerivative(vel_ref);
   task_joint_posture_->setReference(sample_posture_joint);
-  
+
   compute_problem_and_set_command(state.first, state.second); //q and v
 
   return controller_interface::return_type::OK;

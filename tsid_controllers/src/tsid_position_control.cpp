@@ -323,6 +323,7 @@ void TsidPositionControl::updateParams()
 
     task_joint_posture_->Kp(kp);
     task_joint_posture_->Kd(kd);
+
   }
 }
 
@@ -407,13 +408,13 @@ void TsidPositionControl::compute_problem_and_set_command(
   Eigen::VectorXd tau_cmd = Eigen::VectorXd::Zero(model_.nv - 6);
   q_cmd = q.tail(model_.nq - 7);
 
-  if(params_.interface_name == "position"){
+  if (params_.interface_name == "position") {
     // Solving the problem
     const auto sol = solver_->solve(solverData);
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
     v_cmd = v_ + a * dt_.seconds();
-    if(first_tsid_iter_) {
+    if (first_tsid_iter_) {
       q_int_ = q;
       first_tsid_iter_ = false;
     }
@@ -429,12 +430,11 @@ void TsidPositionControl::compute_problem_and_set_command(
       command_interfaces_[jnt_command_id_[joint]].set_value(
         q_cmd[model_.getJointId(joint) - 2]);
     }
-  }else if (params_.interface_name == "velocity")
-  {
+  } else if (params_.interface_name == "velocity") {
     // Solving the problem
     const auto sol = solver_->solve(solverData);
     // Integrating acceleration to get velocity
-     
+
     a = formulation_->getAccelerations(sol);
     v_cmd = (v_ + a * dt_.seconds()).tail(model_.nv - 6);
 
@@ -442,9 +442,8 @@ void TsidPositionControl::compute_problem_and_set_command(
     for (const auto & joint : joint_command_names_) {
       command_interfaces_[jnt_command_id_[joint]].set_value(
         v_cmd[model_.getJointId(joint) - 2]);
-            }
-  }else if(params_.interface_name == "effort")
-  {
+    }
+  } else if (params_.interface_name == "effort") {
     // Solving the problem
     const auto sol = solver_->solve(solverData);
 
