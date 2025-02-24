@@ -12,13 +12,57 @@ sin_joint_controller:
     ee_names:
       - arm_right_7_link
 
-    interface_name: effort
+    interface_name: position
 
     velocity_scaling: 1.0
-    posture_gain: 100.0 #100 sim
+    joint_pos_gain:
+    #Real robot values
+      # arm_right_1_joint:
+      #   kp: 2000.0
+      #   kd: 400.0
+      # arm_right_2_joint:
+      #   kp: 2000.0
+      #   kd: 400.0
+      # arm_right_3_joint:
+      #   kp: 2000.0
+      #   kd: 400.0
+      # arm_right_4_joint:
+      #   kp: 2000.0
+      #   kd: 400.0
+      # arm_right_5_joint:
+      #   kp: 2000.0
+      #   kd: 400.0
+      # arm_right_6_joint:
+      #   kp: 2000.0
+      #   kd: 400.0
+      # arm_right_7_joint:
+      #   kp: 50.0
+      #   kd: 0.2
+    #Simulation
+      arm_right_1_joint:
+       kp: 100.0
+       kd: 50.0
+      arm_right_2_joint:
+       kp: 100.0
+       kd: 50.0
+      arm_right_3_joint:
+       kp: 100.0
+       kd: 50.0
+      arm_right_4_joint:
+       kp: 100.0
+       kd: 50.0
+      arm_right_5_joint:
+       kp: 100.0
+       kd: 50.0
+      arm_right_6_joint:
+       kp: 100.0
+       kd: 50.0
+      arm_right_7_joint:
+       kp: 100.0
+       kd: 50.0
 
     sin_amplitude: 0.4
-    sin_frequency: 10.0
+    sin_frequency: 1.0
     sin_phase: 0.7 # * M_PHI
 
     parameters_sin:

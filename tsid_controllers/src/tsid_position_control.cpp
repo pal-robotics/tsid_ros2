@@ -321,12 +321,6 @@ void TsidPositionControl::updateParams()
       kd[jnt_command_id_[joint]] = gain.kd;
     }
 
-    // Update sinusoidal params 
-    double sin_amplitude = params_.sin_amplitude;
-    double sin_frequency = params_.sin_frequency;
-    double sin_phase = params_.sin_phase * M_PI;
-
-
     task_joint_posture_->Kp(kp);
     task_joint_posture_->Kd(kd);
   }

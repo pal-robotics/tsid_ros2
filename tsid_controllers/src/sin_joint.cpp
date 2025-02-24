@@ -71,6 +71,9 @@ controller_interface::return_type SinJointSpaceController::update(
 {
   t_curr_ = t_curr_ + dt_.seconds();
   TsidPositionControl::updateParams();
+  sin_amplitude_ = getParams().sin_amplitude; 
+  sin_frequency_ = getParams().sin_frequency; 
+  sin_phase_ = getParams().sin_phase * M_PI;
 
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
@@ -82,6 +85,7 @@ controller_interface::return_type SinJointSpaceController::update(
       ref[i] =  initial_position_[i] + sin_amplitude_ * sin(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
       vel_ref[i] = sin_amplitude_ * 2 * M_PI * sin_frequency_ * cos(2 * M_PI * sin_frequency_ * t_curr_ + sin_phase_);
   }
+
   // Set the reference to the joint posture task
   tsid::trajectories::TrajectorySample sample_posture_joint(ref.size());
   sample_posture_joint.setValue(ref);

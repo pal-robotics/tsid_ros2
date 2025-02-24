@@ -24,6 +24,7 @@
 #include <tsid_controllers_params.hpp>
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "tsid_controllers/tsid_position_control.hpp"
+#include <math.h>
 
 namespace tsid_controllers
 {
