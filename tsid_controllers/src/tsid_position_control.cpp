@@ -186,10 +186,10 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
 
 
   publisher_curr_vel =
-    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("cmd_vel", 10);
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_vel", 10);
 
   publisher_curr_pos =
-    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("cmd_pos", 10);
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_pos", 10);
 
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -435,8 +435,9 @@ void TsidPositionControl::compute_problem_and_set_command(
 
   for (int i = 0; i < q_cmd.size(); ++i) {
     msg_pos.data.push_back(q_cmd[i]);
-    msg_vel.data.push_back(v_cmd.tail(model_.nv - 6)[i]);
+    msg_vel.data.push_back(v_cmd[i]);
   }
+  
   publisher_curr_pos->publish(msg_pos);
   publisher_curr_vel->publish(msg_vel);
 }
