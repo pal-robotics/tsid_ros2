@@ -241,9 +241,6 @@ tsid_controllers:
         default_value: 0.0,
         description: "Contains the reduction ratio of the command_joint to transform from torque to current.",
         read_only: false,
-        validation: {
-          gt<>: [0],
-        }
       }
 
       static_friction: {

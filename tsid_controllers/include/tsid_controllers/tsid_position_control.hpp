@@ -106,6 +106,7 @@ private:
 
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_current;
   Eigen::VectorXd q_prev_;
   Eigen::VectorXd q_int_;
   bool first_tsid_iter_;

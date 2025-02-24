@@ -21,6 +21,9 @@ joint_space_controller:
       - arm_right_6_joint
       - arm_right_7_joint
 
+    ee_names:
+      - arm_right_7_link
+    
     interface_name: position
 
     velocity_scaling: 0.5

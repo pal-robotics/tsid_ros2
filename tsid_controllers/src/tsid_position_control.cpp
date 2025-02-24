@@ -188,7 +188,7 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   publisher_curr_pos =
     get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_pos", 10);
 
-  publisher_curr_curr =
+  publisher_curr_current =
     get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_curr", 10);
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -263,7 +263,6 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
   // Setting posture task reference as initial position
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -383,11 +382,6 @@ void TsidPositionControl::DefaultPositionTasks()
   Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
   Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
 
-  for (int i = 0; i < q_max.size(); i++) {
-    std::cout << "q_max" << q_max[i] << std::endl;
-    std::cout << "q_min" << q_min[i] << std::endl;
-  }
-
   task_joint_bounds_->setPositionBounds(q_min, q_max);
 
   int bounds_priority = 0;    // 0 constraint, 1 cost function
@@ -396,7 +390,7 @@ void TsidPositionControl::DefaultPositionTasks()
   v_scaling_ = params_.velocity_scaling;
   Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_max;
-  Eigen::VectorXd a_max = params_.acc_lim * Eigen::VectorXd::Ones(model_.nv - 6);
+  //Eigen::VectorXd a_max = params_.acc_lim * Eigen::VectorXd::Ones(model_.nv - 6);
   task_joint_bounds_->setVelocityBounds(v_max);
   //task_joint_bounds_->setAccelerationBounds(a_max);
   formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
@@ -425,16 +419,16 @@ void TsidPositionControl::compute_problem_and_set_command(
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
     v_cmd = v_ + a * dt_.seconds();
-  if(first_tsid_iter_) {
-    q_int_ = q;
-    first_tsid_iter_ = false;
-  }
+    if(first_tsid_iter_) {
+      q_int_ = q;
+      first_tsid_iter_ = false;
+    }
 
-  // Integrating velocity to get position
-  q_int_ = pinocchio::integrate(
-    model_, q_int_, v_cmd * dt_.seconds());
+    // Integrating velocity to get position
+    q_int_ = pinocchio::integrate(
+      model_, q_int_, v_cmd * dt_.seconds());
 
-    q_cmd = q_int.tail(model_.nq - 7);
+    q_cmd = q_int_.tail(model_.nq - 7);
 
     // Setting the command to the joint command interfaces
     for (const auto & joint : joint_command_names_) {
@@ -455,9 +449,6 @@ void TsidPositionControl::compute_problem_and_set_command(
       command_interfaces_[jnt_command_id_[joint]].set_value(
         v_cmd[model_.getJointId(joint) - 2]);
             }
-
-    q_prev_ = q.tail(model_.nq - 7);
-
   }else if(params_.interface_name == "effort")
   {
     // Solving the problem
@@ -466,16 +457,9 @@ void TsidPositionControl::compute_problem_and_set_command(
     a = formulation_->getAccelerations(sol);
     v_cmd = v + a * 0.5 * dt_.seconds();
 
-    // Integrating velocity to get position
-    q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
-
-    q_cmd = q_int.tail(model_.nq - 7);
-
-
     tau_cmd = formulation_->getActuatorForces(sol);
 
     // Transform tau_cmd in effort command
-    //print motor torque constant
     for (const auto & joint : joint_command_names_) {
       const auto joint_params = params_.parameters_sin.joint_command_names_map.at(joint);
 
@@ -486,7 +470,8 @@ void TsidPositionControl::compute_problem_and_set_command(
 
     }
   }
-  
+  q_prev_ = q.tail(model_.nq - 7);
+
   std_msgs::msg::Float64MultiArray pub;
 
   for (int i = 0; i < v_cmd.size(); i++) {
@@ -509,7 +494,7 @@ void TsidPositionControl::compute_problem_and_set_command(
     pub_curr.data.push_back(tau_cmd[i]);
   }
 
-  publisher_curr_curr->publish(pub_curr);
+  publisher_curr_current->publish(pub_curr);
   q_prev_ = q.tail(model_.nq - 7);
 }
 
