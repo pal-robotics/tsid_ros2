@@ -4,17 +4,17 @@ sin_joint_controller:
     update_rate: 1000
     
     joint_state_names:
-      - arm_right_6_joint
+      - torso_lift_joint
 
     joint_command_names:
-      - arm_right_6_joint
+      - torso_lift_joint
 
     ee_names:
       - arm_right_7_link
 
     interface_name: position
 
-    velocity_scaling: 1.0
+    velocity_scaling: 0.5
     joint_pos_gain:
     #Real robot values
       # arm_right_1_joint:
@@ -60,9 +60,12 @@ sin_joint_controller:
       arm_right_7_joint:
        kp: 100.0
        kd: 50.0
+      torso_lift_joint:
+        kp: 100.0
+        kd: 50.0
 
-    sin_amplitude: 0.4
-    sin_frequency: 1.0
+    sin_amplitude: 0.1
+    sin_frequency: 0.1
     sin_phase: 0.7 # * M_PHI
 
     parameters_sin:
