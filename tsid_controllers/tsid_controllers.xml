@@ -17,5 +17,9 @@
 
   <class name="tsid_controllers/SinJointSpaceController" type="tsid_controllers::SinJointSpaceController" base_class_type="controller_interface::ControllerInterface">
     <description> Joint space sin </description>
-  </class>  
+  </class> 
+  
+  <class name="tsid_controllers/JointSpaceVelTsidController" type="tsid_controllers::JointSpaceVelTsidController" base_class_type="controller_interface::ControllerInterface">
+    <description> Joint space velocity control </description>
+  </class>
 </library>
