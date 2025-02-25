@@ -413,7 +413,7 @@ void TsidPositionControl::compute_problem_and_set_command(
     const auto sol = solver_->solve(solverData);
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
-    v_cmd = v_ + a * dt_.seconds();
+    v_cmd = v_ + a * 0.5 * dt_.seconds();
     if (first_tsid_iter_) {
       q_int_ = q;
       first_tsid_iter_ = false;
@@ -436,7 +436,7 @@ void TsidPositionControl::compute_problem_and_set_command(
     // Integrating acceleration to get velocity
 
     a = formulation_->getAccelerations(sol);
-    v_cmd = (v_ + a * dt_.seconds()).tail(model_.nv - 6);
+    v_cmd = (v_ + a * 0.5 * dt_.seconds()).tail(model_.nv - 6);
 
     // Setting the command to the joint command interfaces
     for (const auto & joint : joint_command_names_) {
