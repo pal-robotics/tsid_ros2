@@ -78,6 +78,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr ee_cmd_sub_;
 
   std::vector<std::string> ee_names_;
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
 
 };
 } // namespace tsid_controllers
