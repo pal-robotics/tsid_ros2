@@ -93,11 +93,16 @@ protected:
   std::map<std::string, int> jnt_id_;
   std::map<std::string, int> jnt_command_id_;
   rclcpp::Duration dt_;
-  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
 
 private:
   tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
   tsid::solvers::SolverHQuadProgFast * solver_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos_;
+  Eigen::VectorXd q_int_;
+  bool first_tsid_iter_;
+  Eigen::VectorXd q_min_, q_max_;
+  Eigen::VectorXd q_prev_;
 };
 } // namespace tsid_controllers
 

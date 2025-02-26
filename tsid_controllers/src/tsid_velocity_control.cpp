@@ -175,6 +175,8 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
   formulation_ = new tsid::InverseDynamicsFormulationAccForce(
     "tsid", *robot_wrapper_, true);
 
+  first_tsid_iter_ = true;
+
   DefaultVelocityTasks();
 
   // Initializing solver
@@ -183,6 +185,13 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
   solver_->resize(
     formulation_->nVar(), formulation_->nEq(),
     formulation_->nIn());
+
+  publisher_curr_vel_ =
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_vel", 10);
+
+  publisher_curr_pos_ =
+    get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_pos", 10);
+
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -334,16 +343,16 @@ void TsidVelocityControl::DefaultVelocityTasks()
 
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
-    "task-joint-bounds", *robot_wrapper_, dt_.seconds(), true);
-  Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
-  Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
+    "task-joint-bounds", *robot_wrapper_, dt_.seconds(), false);
+  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6);
+  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6);
 
-  for (int i = 0; i < q_max.size(); i++) {
-    std::cout << "q_max" << q_max[i] << std::endl;
-    std::cout << "q_min" << q_min[i] << std::endl;
+  for (int i = 0; i < q_max_.size(); i++) {
+    std::cout << "q_max" << q_max_[i] << std::endl;
+    std::cout << "q_min" << q_min_[i] << std::endl;
   }
 
-  task_joint_bounds_->setPositionBounds(q_min, q_max);
+  task_joint_bounds_->setPositionBounds(q_min_, q_max_);
 
   double transition_time = 0.0;
   int bounds_priority = 0; // 0 constraint, 1 cost function
@@ -361,6 +370,8 @@ void TsidVelocityControl::DefaultVelocityTasks()
 void TsidVelocityControl::compute_problem_and_set_command(
   const Eigen::VectorXd q, const Eigen::VectorXd v)
 {
+  Eigen::VectorXd v_ = Eigen::VectorXd::Zero(model_.nv);
+  v_.tail(model_.nq - 7) = (q.tail(model_.nq - 7) - q_prev_) / dt_.seconds();
 
   // Computing the problem data
   const tsid::solvers::HQPData solverData =
@@ -370,21 +381,54 @@ void TsidVelocityControl::compute_problem_and_set_command(
   const auto sol = solver_->solve(solverData);
 
   // Integrating acceleration to get velocity
-  Eigen::VectorXd a = formulation_->getAccelerations(sol);
-  Eigen::VectorXd v_cmd = v + a * 0.5 * dt_.seconds();
+  Eigen::VectorXd a;
+  Eigen::VectorXd v_cmd;
+  Eigen::VectorXd q_cmd;
+
+  a = formulation_->getAccelerations(sol);
+  v_cmd = v_ + a * 0.5 * dt_.seconds();
+  if (first_tsid_iter_) {
+    q_int_ = q;
+    first_tsid_iter_ = false;
+  }
 
   // Integrating velocity to get position
-  auto q_int = pinocchio::integrate(model_, q, v_cmd * dt_.seconds());
+  q_int_ = pinocchio::integrate(model_, q_int_, v_cmd * dt_.seconds());
 
-  auto q_cmd = q_int.tail(model_.nq - 7);
+  q_cmd = q_int_.tail(model_.nq - 7);
 
-  auto v_com = v_cmd.tail(model_.nq - 7);
+  auto v_com = v_cmd.tail(model_.nv - 6);
+  for (int i = 0; i < v_com.size(); i++) {
+    int joint_index = model_.getJointId(joint_command_names_[i]) - 2;
+
+    if (q_cmd[i] >= (q_max_[joint_index] - 0.05) || q_cmd[i] <= q_min_[joint_index] + 0.05) {
+      RCLCPP_INFO(
+        get_node()->get_logger(), "Joint %s is at limit, setting velocity to 0",
+        model_.names[joint_index + 2].c_str());
+      v_com[i] = 0;
+    }
+  }
 
   // Setting the command to the joint command interfaces
   for (const auto & joint : joint_command_names_) {
     command_interfaces_[jnt_command_id_[joint]].set_value(
       v_com[model_.getJointId(joint) - 2]);
   }
+
+  q_prev_ = q.tail(model_.nq - 7);
+  std_msgs::msg::Float64MultiArray pub;
+
+  for (int i = 0; i < v_cmd.size(); i++) {
+    pub.data.push_back(v_cmd[i]);
+  }
+  publisher_curr_vel_->publish(pub);
+
+  std_msgs::msg::Float64MultiArray pub_pos;
+  for (int i = 0; i < q_cmd.size(); i++) {
+    pub_pos.data.push_back(q_cmd[i]);
+  }
+  publisher_curr_pos_->publish(pub_pos);
+
 }
 
 } // namespace tsid_controllers
