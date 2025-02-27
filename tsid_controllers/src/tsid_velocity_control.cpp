@@ -99,6 +99,8 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
   command_interfaces_.reserve(joint_command_names_.size());
   joint_state_interfaces_.resize(joint_names_.size());
   state_interface_names_.resize(joint_names_.size());
+ 
+  q_prev_ = Eigen::VectorXd::Zero(joint_names_.size());
 
   // Creating a map between index and joint
   int idx = 0;
@@ -257,6 +259,8 @@ controller_interface::CallbackReturn TsidVelocityControl::on_activate(
 
   q0 = state.first;
   v0 = state.second;
+  
+  q_prev_ = q0.tail(robot_wrapper_->nq() - 7);
 
   formulation_->computeProblemData(0.0, q0, v0);
 
@@ -387,6 +391,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
   a = formulation_->getAccelerations(sol);
   v_cmd = v_ + a * 0.5 * dt_.seconds();
+  
   if (first_tsid_iter_) {
     q_int_ = q;
     first_tsid_iter_ = false;
