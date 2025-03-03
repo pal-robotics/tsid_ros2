@@ -390,8 +390,8 @@ void TsidVelocityControl::compute_problem_and_set_command(
   Eigen::VectorXd q_cmd;
 
   a = formulation_->getAccelerations(sol);
-  v_cmd = v_ + a * 0.5 * dt_.seconds();
-  
+  v_cmd = v + a * 0.5 * dt_.seconds();
+
   if (first_tsid_iter_) {
     q_int_ = q;
     first_tsid_iter_ = false;
@@ -403,14 +403,17 @@ void TsidVelocityControl::compute_problem_and_set_command(
   q_cmd = q_int_.tail(model_.nq - 7);
 
   auto v_com = v_cmd.tail(model_.nv - 6);
+
   for (int i = 0; i < v_com.size(); i++) {
     int joint_index = model_.getJointId(joint_command_names_[i]) - 2;
 
     if (q_cmd[i] >= (q_max_[joint_index] - 0.05) || q_cmd[i] <= q_min_[joint_index] + 0.05) {
-      RCLCPP_INFO(
-        get_node()->get_logger(), "Joint %s is at limit, setting velocity to 0",
+      RCLCPP_INFO_THROTTLE(
+        get_node()->get_logger(), *get_node()->get_clock(), 2000,
+        "Joint %s is at limit, setting velocity to 0",
         model_.names[joint_index + 2].c_str());
       v_com[i] = 0;
+      q_cmd[i] = q_prev_[joint_index];
     }
   }
 
