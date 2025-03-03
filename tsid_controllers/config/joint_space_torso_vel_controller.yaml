@@ -15,6 +15,7 @@ joint_space_torso_vel_controller:
     velocity_scaling: 1.0
     joint_vel_gain:
       torso_lift_joint:
-        kp: 200.0
-        kd: 500.0
+        kp: 700.0
+        kd: 0.5
+        ki: 50.0
     
