@@ -33,12 +33,14 @@ ament_auto_add_library(tsid_controllers SHARED
 target_link_libraries(tsid_controllers
                       tsid_controllers_params
                       pinocchio::pinocchio  
-                      tsid::tsid                      
+                      tsid::tsid
+                      ${eiquadprog_vendor_LIBRARIES}
 )
 target_include_directories(tsid_controllers PUBLIC
   ${EIGEN3_INCLUDE_DIR}
   pinocchio::pinocchio
-  tsid::tsid  
+  tsid::tsid
+  ${eiquadprog_vendor_INCLUDE_DIRS}
 )
 
 
