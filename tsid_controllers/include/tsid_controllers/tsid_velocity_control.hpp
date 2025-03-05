@@ -103,6 +103,8 @@ private:
   bool first_tsid_iter_;
   Eigen::VectorXd q_min_, q_max_;
   Eigen::VectorXd q_prev_;
+  Eigen::VectorXd v_max_;
+  bool joint_limit_reached_;
 };
 } // namespace tsid_controllers
 

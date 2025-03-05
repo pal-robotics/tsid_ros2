@@ -99,7 +99,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
   command_interfaces_.reserve(joint_command_names_.size());
   joint_state_interfaces_.resize(joint_names_.size());
   state_interface_names_.resize(joint_names_.size());
- 
+
   q_prev_ = Eigen::VectorXd::Zero(joint_names_.size());
 
   // Creating a map between index and joint
@@ -259,7 +259,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_activate(
 
   q0 = state.first;
   v0 = state.second;
-  
+
   q_prev_ = q0.tail(robot_wrapper_->nq() - 7);
 
   formulation_->computeProblemData(0.0, q0, v0);
@@ -309,9 +309,9 @@ void TsidVelocityControl::updateParams()
     RCLCPP_INFO(get_node()->get_logger(), "Updating parameters");
 
     v_scaling_ = params_.velocity_scaling;
-    Eigen::VectorXd v_max =
+    v_max_ =
       v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
-    task_joint_bounds_->setVelocityBounds(v_max);
+    task_joint_bounds_->setVelocityBounds(v_max_);
     /*  task_joint_posture_->Kp(
         params_.posture_gain *
         Eigen::VectorXd::Ones(robot_wrapper_->nv() - 6));
@@ -363,9 +363,9 @@ void TsidVelocityControl::DefaultVelocityTasks()
   double bounds_weight = 1;
   // Joint velocity bounds
   v_scaling_ = params_.velocity_scaling;
-  Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
-  Eigen::VectorXd v_min = -v_max;
-  task_joint_bounds_->setVelocityBounds(v_max);
+  v_max_ = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
+  Eigen::VectorXd v_min = -v_max_;
+  task_joint_bounds_->setVelocityBounds(v_max_);
   formulation_->addMotionTask(
     *task_joint_bounds_, bounds_weight,
     bounds_priority, transition_time);
@@ -392,7 +392,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
   v_cmd = v + a * 0.5 * dt_.seconds();
 
-  if (first_tsid_iter_) {
+  if (first_tsid_iter_ || joint_limit_reached_) {
     q_int_ = q;
     first_tsid_iter_ = false;
   }
@@ -403,18 +403,55 @@ void TsidVelocityControl::compute_problem_and_set_command(
   q_cmd = q_int_.tail(model_.nq - 7);
 
   auto v_com = v_cmd.tail(model_.nv - 6);
+  double threshold = 0.05;
 
-  // Setting the command to the joint command interfaces
   for (const auto & joint : joint_command_names_) {
+
+    if (std::abs(q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+        q_min_[model_.getJointId(joint) - 2]) < threshold)
+    {
+      RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 5000,
+                              "Joint %ld reached the lower limit: q = %f", model_.getJointId(
+          joint) - 2, q.tail(model_.nq - 7)[model_.getJointId(joint) - 2]);
+
+      q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+
+      if(v_com[model_.getJointId(joint) - 2] < 0) {
+        joint_limit_reached_ = true;
+        v_com[model_.getJointId(joint) - 2] = 0;
+      } else {
+        joint_limit_reached_ = false;
+      }
+    } else if(std::abs(q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+        q_max_[model_.getJointId(joint) - 2]) < threshold)
+    {
+      RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 5000,
+                              "Joint %ld reached the upper limit: q = %f", model_.getJointId(
+          joint) - 2, q.tail(
+          model_.nq - 7)[model_.getJointId(joint) - 2]);
+
+      q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+
+      if(v_com[model_.getJointId(joint) - 2] > 0) {
+        joint_limit_reached_ = true;
+        v_com[model_.getJointId(joint) - 2] = 0;
+      } else {
+        joint_limit_reached_ = false;
+      }
+    }
+    // }
+
+    // Setting the command to the joint command interfaces
     command_interfaces_[jnt_command_id_[joint]].set_value(
       v_com[model_.getJointId(joint) - 2]);
+
   }
 
   q_prev_ = q.tail(model_.nq - 7);
   std_msgs::msg::Float64MultiArray pub;
 
-  for (int i = 0; i < v_cmd.size(); i++) {
-    pub.data.push_back(v_cmd[i]);
+  for (int i = 0; i < v_com.size(); i++) {
+    pub.data.push_back(v_com[i]);
   }
   publisher_curr_vel_->publish(pub);
 
