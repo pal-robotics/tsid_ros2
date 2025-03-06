@@ -403,7 +403,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
   q_cmd = q_int_.tail(model_.nq - 7);
 
   auto v_com = v_cmd.tail(model_.nv - 6);
-  double threshold = 0.05;
+  double threshold = 0.02;
 
   for (const auto & joint : joint_command_names_) {
 
