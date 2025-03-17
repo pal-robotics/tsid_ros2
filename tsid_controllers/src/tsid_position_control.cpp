@@ -105,6 +105,9 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
   state_interface_names_.resize(joint_names_.size());
 
   q_prev_ = Eigen::VectorXd::Zero(joint_names_.size());
+
+  position_end_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+
   //Creating a map between index and joint
   int idx = 0;
 
@@ -401,7 +404,7 @@ void TsidPositionControl::compute_problem_and_set_command(
   v_.tail(model_.nq - 7) = (q.tail(model_.nq - 7) - q_prev_) / dt_.seconds();
 
   // Computing the problem data
-  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q, v_);
+  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q, v);
   Eigen::VectorXd q_cmd;
   Eigen::VectorXd v_cmd, a;
   Eigen::VectorXd q_int;
@@ -413,8 +416,11 @@ void TsidPositionControl::compute_problem_and_set_command(
     const auto sol = solver_->solve(solverData);
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
-    v_cmd = v_ + a * 0.5 * dt_.seconds();
+    v_cmd = v + a * 0.5 * dt_.seconds();
     if (first_tsid_iter_) {
+      RCLCPP_INFO(
+        get_node()->get_logger(), "position_end %f",
+        task_joint_posture_->getReference().getValue()[0]);
       q_int_ = q;
       first_tsid_iter_ = false;
     }
@@ -472,7 +478,6 @@ void TsidPositionControl::compute_problem_and_set_command(
   }
 
   publisher_curr_vel->publish(pub);
-  q_cmd = task_joint_posture_->getReference().getValue();
   std_msgs::msg::Float64MultiArray pub_pos;
 
   for (int i = 0; i < q_cmd.size(); i++) {
