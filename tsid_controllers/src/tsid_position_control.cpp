@@ -106,7 +106,6 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
 
   q_prev_ = Eigen::VectorXd::Zero(joint_names_.size());
 
-  position_end_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
 
   //Creating a map between index and joint
   int idx = 0;
@@ -480,6 +479,7 @@ void TsidPositionControl::compute_problem_and_set_command(
   publisher_curr_vel->publish(pub);
   std_msgs::msg::Float64MultiArray pub_pos;
 
+  q_cmd = task_joint_posture_->getReference().getValue();
   for (int i = 0; i < q_cmd.size(); i++) {
     pub_pos.data.push_back(q_cmd[i]);
   }

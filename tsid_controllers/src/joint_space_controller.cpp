@@ -153,6 +153,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
 
   double a_max;
   double v_max_ = params_.velocity_scaling * v_max;
+  RCLCPP_INFO(get_node()->get_logger(), "v_max %f", v_max_);
   a_max = v_max_ / ( 2 * dt_.seconds());
   t_acc_ = v_max_ / a_max;
 
@@ -161,7 +162,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
   double s_dot = 0;
 
   t_flat_ =
-    ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max_ * t_acc_) /
+    (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max_ * t_acc_) /
     v_max_;
 
   // Computation of a trapezoidal trajectory
@@ -170,26 +171,30 @@ void JointSpaceTsidController::interpolate(double t_curr)
       s = 0.5 * a_max * t_curr * t_curr;
       s_dot = a_max * t_curr;
     } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
-      s = 0.5 * a_max * t_acc_ * t_acc_ + v_max_ *
-        ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) * (t_curr - t_acc_ );
-      s_dot = v_max_ * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]));
+      s = v_max_ *
+        (std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) *
+        (t_curr - t_acc_ / 2 );
+      s_dot = v_max_ * (std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex]));
     } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
-      s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) -
+      s = std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) -
         0.5 * a_max *
         (t_flat_ + 2 * t_acc_ - t_curr) *
         (t_flat_ + 2 * t_acc_ - t_curr);
-      s_dot = v_max_ * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) - a_max *
+      s_dot = v_max_ * (std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) - a_max *
         (t_curr - t_flat_ - t_acc_);
     } else {
-      s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]);
+      s = std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]);
       s_dot = 0;
     }
-    position_curr_[jnt_id_[joint]] = position_start_[jnt_id_[joint]] + s;
-    vel_curr_[jnt_id_[joint]] = s_dot;
+    position_curr_[jnt_id_[joint]] = position_start_[jnt_id_[joint]] +
+      copysign(1, position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) * s;
+    vel_curr_[jnt_id_[joint]] =
+      copysign(1, position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) * s_dot;
   }
+
 
 }
 
