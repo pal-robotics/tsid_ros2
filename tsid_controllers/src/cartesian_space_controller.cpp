@@ -81,11 +81,16 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
     auto gain = getParams().cartesian_gain.ee_names_map.at(ee);
     Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+
     kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
       gain.kp_yaw;
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch,
+      gain.kd_yaw;
+
     task_ee_[ee_id_[ee]]->Kp(kp_gain);
 
-    task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
 
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
@@ -260,8 +265,13 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
-          // pinocchio::SE3 se3(rot_des_, desired_pose_[ee_id_[ee]]);
-          // tsid::math::SE3ToVector(se3, ref);
+          Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
+
+          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
+          tsid::math::SE3ToVector(se3, ref);
+
+          rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
+
         }
 
         tsid::trajectories::TrajectorySample sample_posture_ee =
@@ -419,6 +429,24 @@ void CartesianSpaceController::updateParams()
   TsidPositionControl::updateParams();
 
   v_max = params_.ee_vmax;
+
+  Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+  Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+
+  for (const auto & ee : ee_names_) {
+
+    auto gain = getParams().cartesian_gain.ee_names_map.at(ee);
+
+    kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
+      gain.kp_yaw;
+
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch,
+      gain.kd_yaw;
+
+    task_ee_[ee_id_[ee]]->Kp(kp_gain);
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
+
+  }
 
 }
 

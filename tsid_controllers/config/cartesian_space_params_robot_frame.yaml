@@ -35,62 +35,69 @@ cartesian_space_controller:
 
     joint_pos_gain:
     #Real robot values
+      #arm_right_1_joint:
+      #  kp: 25000.0
+      #  kd: 850.0
+      #arm_right_2_joint:
+      #  kp: 25000.0
+      #  kd: 850.0
+      #arm_right_3_joint:
+      #  kp: 40000.0
+      #  kd: 1000.0
+      #arm_right_4_joint:
+      #  kp: 40000.0
+      #  kd: 1000.0
+      #arm_right_5_joint:
+      #  kp: 20000.0
+      #  kd: 1000.0
+      #arm_right_6_joint:
+      #  kp: 15000.0
+      #  kd: 1000.0
+      #arm_right_7_joint:
+      #  kp: 50.0
+      #  kd: 0.2
+    #Simulation
       arm_right_1_joint:
         kp: 100.0
-        kd: 15.0
+        kd: 50.0
       arm_right_2_joint:
         kp: 100.0
-        kd: 15.0
+        kd: 50.0
       arm_right_3_joint:
         kp: 100.0
-        kd: 15.0
+        kd: 50.0
       arm_right_4_joint:
         kp: 100.0
-        kd: 15.0
+        kd: 50.0
       arm_right_5_joint:
-        kp: 200.0
-        kd: 7.50
+        kp: 100.0
+        kd: 50.0
       arm_right_6_joint:
-        kp: 200.0
-        kd: 7.50
+        kp: 100.0
+        kd: 50.0
       arm_right_7_joint:
-        kp: 50.0
-        kd: 0.2
-    #Simulation
-      #arm_right_1_joint:
-      #  kp: 100.0
-      #  kd: 50.0
-      #arm_right_2_joint:
-      #  kp: 100.0
-      #  kd: 50.0
-      #arm_right_3_joint:
-      #  kp: 100.0
-      #  kd: 50.0
-      #arm_right_4_joint:
-      #  kp: 100.0
-      #  kd: 50.0
-      #arm_right_5_joint:
-      #  kp: 100.0
-      #  kd: 50.0
-      #arm_right_6_joint:
-      #  kp: 100.0
-      #  kd: 50.0
-      #arm_right_7_joint:
-      #  kp: 100.0
-      #  kd: 50.0
+        kp: 100.0
+        kd: 50.0
 
     cartesian_gain:
          arm_right_7_link:
-          #kp_x: 1500.0
-          #kp_y: 1500.0
-          #kp_z: 1500.0
-          #kp_roll: 700.0
-          #kp_pitch: 700.0
-          #kp_yaw: 700.0
-          kp_x: 500.0
-          kp_y: 500.0
-          kp_z: 1000.0
-          kp_roll: 70.0
-          kp_pitch: 70.0
-          kp_yaw: 70.0
+          kp_x: 1500.0
+          kp_y: 1500.0
+          kp_z: 1500.0
+          kp_roll: 700.0
+          kp_pitch: 700.0
+          kp_yaw: 700.0
+          #kp_x: 500.0
+          #kp_y: 500.0
+          #kp_z: 1000.0
+          #kp_roll: 70.0
+          #kp_pitch: 70.0
+          #kp_yaw: 70.0
+          kd_x: 500.0
+          kd_y: 500.0
+          kd_z: 500.0
+          kd_roll: 100.0
+          kd_pitch: 100.0
+          kd_yaw: 100.0
+          
 

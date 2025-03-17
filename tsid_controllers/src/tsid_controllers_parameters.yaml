@@ -193,7 +193,23 @@ tsid_controllers:
       kp_z: {
         type: double,
         default_value: 0.0,
-        description: "Cartesian position gain in z direction",
+        description: "
+        Cartesian position gain in z direction",
+      }
+      kd_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian velocity damping in x direction",
+      }
+      kd_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian velocity damping in y direction",
+      }
+      kd_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian velocity damping in z direction",
       }
       kp_roll: {
         type: double,
@@ -209,6 +225,21 @@ tsid_controllers:
         type: double,
         default_value: 0.0,
         description: "Cartesian orientation gain in yaw direction",
+      }
+      kd_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation damping in roll direction",
+      }
+      kd_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation damping in pitch direction",
+      }
+      kd_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian orientation damping in yaw direction",
       }
 
   sin_amplitude: {
