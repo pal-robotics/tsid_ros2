@@ -96,6 +96,8 @@ protected:
   std::map<std::string, int> jnt_command_id_;
   tsid::tasks::TaskJointPosture * task_joint_posture_;
   rclcpp::Duration dt_;
+  Eigen::VectorXd position_end_;
+  bool first_tsid_iter_;
 
 private:
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
@@ -109,7 +111,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_current;
   Eigen::VectorXd q_prev_;
   Eigen::VectorXd q_int_;
-  bool first_tsid_iter_;
+
 
 };
 } // namespace tsid_controllers

@@ -153,8 +153,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
 
   double a_max;
   double v_max_ = params_.velocity_scaling * v_max;
-  RCLCPP_INFO(get_node()->get_logger(), "v_max %f", v_max_);
-  a_max = v_max_ / ( 2 * dt_.seconds());
+  a_max = v_max_ / ( dt_.seconds());
   t_acc_ = v_max_ / a_max;
 
 

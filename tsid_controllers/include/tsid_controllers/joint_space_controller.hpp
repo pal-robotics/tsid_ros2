@@ -55,7 +55,6 @@ private:
   double v_max = 2.5;
 
   Eigen::VectorXd position_start_;
-  Eigen::VectorXd position_end_;
   Eigen::VectorXd position_curr_;
   Eigen::VectorXd vel_curr_;
 

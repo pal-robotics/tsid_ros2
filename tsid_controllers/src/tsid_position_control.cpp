@@ -249,6 +249,8 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
       joint.c_str(), joint_state_interfaces_[jnt_id_[joint]][0].get().get_value());
   }
 
+  first_tsid_iter_ = true;
+
   // Taking initial position from the joint state interfaces
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nq());
   Eigen::VectorXd v0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
