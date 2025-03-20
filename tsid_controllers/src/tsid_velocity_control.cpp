@@ -405,46 +405,65 @@ void TsidVelocityControl::compute_problem_and_set_command(
   auto v_com = v_cmd.tail(model_.nv - 6);
   double threshold = 0.02;
 
-  for (const auto & joint : joint_command_names_) {
+  int indx = 0;
+  joint_limit_reached_ = false;
+  while (!joint_limit_reached_ && indx < (joint_command_names_.size() - 1)) {
 
-    if (std::abs(q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+    auto joint = joint_command_names_[indx];
+    if (std::abs(
+        q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
         q_min_[model_.getJointId(joint) - 2]) < threshold)
     {
-      RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 5000,
-                              "Joint %ld reached the lower limit: q = %f", model_.getJointId(
+      RCLCPP_WARN_THROTTLE(
+        get_node()->get_logger(), *get_node()->get_clock(), 5000,
+        "Joint %ld reached the lower limit: q = %f", model_.getJointId(
           joint) - 2, q.tail(model_.nq - 7)[model_.getJointId(joint) - 2]);
 
       q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-      if(v_com[model_.getJointId(joint) - 2] < 0) {
+      if (v_com[model_.getJointId(joint) - 2] < 0) {
         joint_limit_reached_ = true;
         v_com[model_.getJointId(joint) - 2] = 0;
       } else {
         joint_limit_reached_ = false;
       }
-    } else if(std::abs(q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+    } else if (std::abs(
+        q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
         q_max_[model_.getJointId(joint) - 2]) < threshold)
     {
-      RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 5000,
-                              "Joint %ld reached the upper limit: q = %f", model_.getJointId(
+      RCLCPP_WARN_THROTTLE(
+        get_node()->get_logger(), *get_node()->get_clock(), 5000,
+        "Joint %ld reached the upper limit: q = %f", model_.getJointId(
           joint) - 2, q.tail(
           model_.nq - 7)[model_.getJointId(joint) - 2]);
 
       q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-      if(v_com[model_.getJointId(joint) - 2] > 0) {
+      if (v_com[model_.getJointId(joint) - 2] > 0) {
         joint_limit_reached_ = true;
+
         v_com[model_.getJointId(joint) - 2] = 0;
       } else {
         joint_limit_reached_ = false;
       }
     }
-    // }
+    indx++;
+  }
 
-    // Setting the command to the joint command interfaces
-    command_interfaces_[jnt_command_id_[joint]].set_value(
-      v_com[model_.getJointId(joint) - 2]);
+  for (auto joint : joint_command_names_) {
+    if (joint_limit_reached_) {
+      RCLCPP_WARN_THROTTLE(
+        get_node()->get_logger(), *get_node()->get_clock(), 5000,
+        "Joint limit reached");
 
+      command_interfaces_[jnt_command_id_[joint]].set_value(
+        0.0);
+    } else {
+
+      command_interfaces_[jnt_command_id_[joint]].set_value(
+        v_com[model_.getJointId(joint) - 2]);
+
+    }
   }
 
   q_prev_ = q.tail(model_.nq - 7);
