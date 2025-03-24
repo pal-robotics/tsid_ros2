@@ -27,6 +27,7 @@
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid_controllers_params.hpp>
+#include "tsid_controllers/tasks/task-se3-equality.hpp"
 
 namespace tsid_controllers
 {
@@ -76,6 +77,8 @@ private:
   Eigen::Vector3d position_start_;
   Eigen::Vector3d position_end_;
   Eigen::Vector3d position_curr_;
+  Eigen::VectorXd position_curr_joint_;
+  Eigen::VectorXd vel_curr_joint_;
   Eigen::Quaterniond quat_init_;
   Eigen::Quaterniond quat_des_;
   Eigen::Vector3d vel_curr_;

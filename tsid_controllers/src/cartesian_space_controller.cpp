@@ -16,6 +16,11 @@
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include <pluginlib/class_list_macros.hpp>
+ #include "pinocchio/parsers/sample-models.hpp"
+ #include "pinocchio/spatial/explog.hpp"
+ #include "pinocchio/algorithm/kinematics.hpp"
+ #include "pinocchio/algorithm/jacobian.hpp"
+ #include "pinocchio/algorithm/joint-configuration.hpp"
 
 using namespace controller_interface;
 namespace tsid_controllers
@@ -104,6 +109,10 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
       *task_ee_[ee_id_[ee]], ee_weight, ee_priority, transition_time);
   }
 
+  position_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
+  vel_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
+
+
   v_max = params_.ee_vmax;
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -145,6 +154,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
       H_ee_0_[ee_id_[ee]].translation()[2]);
   }
 
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+  position_curr_joint_ = state.first.tail(robot_wrapper_->nq() - 7);
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -154,12 +166,20 @@ CartesianSpaceController::update(
   const rclcpp::Duration & /*period*/)
 {
   t_curr_ = t_curr_ + dt_.seconds();
-  TsidPositionControl::updateParams();
+
+  updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
 
   // if (iteration % 4 == 0) {
   interpolate(t_curr_);
+
+  /*tsid::trajectories::TrajectorySample sample_posture_joint(position_curr_joint_.size());
+  sample_posture_joint.setValue(position_curr_joint_);
+  sample_posture_joint.setDerivative(vel_curr_joint_);
+
+  task_joint_posture_->setReference(sample_posture_joint);*/
+
 
   Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
 
@@ -180,6 +200,9 @@ CartesianSpaceController::update(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
+  if (abs(h_ee_.translation().norm() - position_end_.norm()) < 0.002) {
+    first_tsid_iter_ = true;
+  }
   geometry_msgs::msg::Pose current_pose;
   Eigen::Quaterniond quat_curr(h_ee_.rotation());
   current_pose.position.x = h_ee_.translation()[0];
@@ -335,6 +358,8 @@ void CartesianSpaceController::setPoseCallback(
       "Controller is not active, the command will be ignored");
   }
   iteration = 0;
+  first_tsid_iter_ = true;
+
 }
 
 void CartesianSpaceController::compute_trajectory_params()
@@ -346,7 +371,7 @@ void CartesianSpaceController::compute_trajectory_params()
 
   // Computing timing parameters of position trajectory
   if (position_end_ != position_start_) {
-    a_max = v_max / ( 2 * dt_.seconds());
+    a_max = v_max / ( dt_.seconds());
     t_acc_ = v_max / a_max;
     t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
     un_dir_vec = (position_end_ - position_start_) /
@@ -421,6 +446,55 @@ void CartesianSpaceController::interpolate(double t_curr)
 
   position_curr_ = position_start_ + s * un_dir_vec;
   vel_curr_ = s_dot * un_dir_vec;
+
+
+  Eigen::VectorXd q_prev_pin = Eigen::VectorXd::Zero(model_.nq);
+  q_prev_pin.tail(model_.nq - 7) = position_curr_joint_;
+  q_prev_pin[6] = 1.0;
+
+
+  pinocchio::Data::Matrix6x J_ee(6, model_.nv);
+  RCLCPP_INFO(
+    get_node()->get_logger(), "Position computed : %f , %f , %f", position_curr_[0],
+    position_curr_[1], position_curr_[2]);
+  pinocchio::computeJointJacobians(
+    model_, formulation_->data(), q_prev_pin);
+  pinocchio::getJointJacobian(
+    model_, formulation_->data(),
+    model_.getJointId("arm_right_7_joint"), pinocchio::WORLD, J_ee);
+  RCLCPP_INFO(
+    get_node()->get_logger(), "Velocity computed : %f , %f , %f", vel_curr_[0],
+    vel_curr_[1], vel_curr_[2]);
+  const double damp = 1e-6;
+
+  pinocchio::Data::Matrix6x J_ee_inv;
+  J_ee_inv.noalias() = (J_ee * J_ee.transpose());
+  J_ee_inv.diagonal().array() += damp;
+
+
+  Eigen::VectorXd v_pin(model_.nv);
+  Eigen::VectorXd q_pin = pinocchio::neutral(model_);
+  Eigen::VectorXd vel_ee = Eigen::VectorXd::Zero(6);
+  vel_ee << vel_curr_, Eigen::Vector3d::Zero();
+  v_pin.noalias() = -J_ee.transpose() * J_ee_inv.ldlt().solve(vel_ee);
+  q_pin = pinocchio::integrate(
+    model_, q_prev_pin,
+    v_pin * dt_.seconds());
+
+
+  for (auto joint : params_.joint_command_names) {
+    position_curr_joint_[jnt_id_[joint]] =
+      q_pin.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2];
+    vel_curr_joint_[jnt_id_[joint]] =
+      v_pin.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) - 2];
+    /* RCLCPP_INFO(
+       get_node()->get_logger(), "Joint %s position computed : %f",
+       joint.c_str(), position_curr_joint_[jnt_id_[joint]]);
+     RCLCPP_INFO(
+       get_node()->get_logger(), "Joint %s velocity computed : %f",
+       joint.c_str(), vel_curr_joint_[jnt_id_[joint]]);*/
+  }
+
 
 }
 

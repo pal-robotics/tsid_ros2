@@ -258,7 +258,7 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
 
   q0 = state.first;
-  v0 = state.second;
+  //v0 = state.second;
 
   q_prev_ = q0.tail(robot_wrapper_->nq() - 7);
 
