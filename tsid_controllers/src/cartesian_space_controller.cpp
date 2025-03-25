@@ -491,17 +491,17 @@ void CartesianSpaceController::interpolate(double t_curr)
 
 
   pinocchio::Data::Matrix6x J_ee(6, model_.nv);
-  // RCLCPP_INFO(
-  //   get_node()->get_logger(), "Position computed : %f , %f , %f", position_curr_[0],
-  //   position_curr_[1], position_curr_[2]);
+  RCLCPP_INFO(
+    get_node()->get_logger(), "Position computed : %f , %f , %f", position_curr_[0],
+    position_curr_[1], position_curr_[2]);
   pinocchio::computeJointJacobians(
     model_, formulation_->data(), q_prev_pin);
   pinocchio::getJointJacobian(
     model_, formulation_->data(),
     model_.getJointId("arm_right_7_joint"), pinocchio::WORLD, J_ee);
-  // RCLCPP_INFO(
-  //   get_node()->get_logger(), "Velocity computed : %f , %f , %f", vel_curr_[0],
-  //   vel_curr_[1], vel_curr_[2]);
+  RCLCPP_INFO(
+    get_node()->get_logger(), "Velocity computed : %f , %f , %f", vel_curr_[0],
+    vel_curr_[1], vel_curr_[2]);
   const double damp = 1e-6;
 
   pinocchio::Data::Matrix6x J_ee_inv;
