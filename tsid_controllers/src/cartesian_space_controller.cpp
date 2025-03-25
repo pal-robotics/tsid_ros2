@@ -71,6 +71,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   publisher_curr_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
     "current_position", 10);
 
+  publisher_des_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
+    "tsid_cartesian_controller/desired_pose", 10);
   // Pose reference callback
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
@@ -167,6 +169,8 @@ CartesianSpaceController::update(
 {
   t_curr_ = t_curr_ + dt_.seconds();
 
+  t_align_ = t_align_ + dt_.seconds();
+
   updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
@@ -200,7 +204,11 @@ CartesianSpaceController::update(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
-  if (abs(h_ee_.translation().norm() - position_end_.norm()) < 0.002) {
+  if (abs(h_ee_.translation()[0] - position_end_[0]) < 0.005 &&
+    abs(h_ee_.translation()[1] - position_end_[1]) < 0.005 &&
+    abs(h_ee_.translation()[2] - position_end_[2]) < 0.005 && t_align_ >= 1.5)
+  {
+    t_align_ = 0.0;
     first_tsid_iter_ = true;
   }
   geometry_msgs::msg::Pose current_pose;
@@ -319,6 +327,7 @@ void CartesianSpaceController::setPoseCallback(
 
         t_curr_ = 0.0;
         position_start_ = h_ee_.translation();
+        quat_init_ = h_ee_.rotation();
         std::cout << "position_start_ " << position_start_ << std::endl;
         std::cout << "position_end_ " << position_end_ << std::endl;
         std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
@@ -378,12 +387,11 @@ void CartesianSpaceController::compute_trajectory_params()
 {
   t_acc_ = 0.0;
   t_flat_ = 0.0;
-  a_max = 0.0;
+  a_max = 1.5;
   scale_ = 1.0;
 
   // Computing timing parameters of position trajectory
   if (position_end_ != position_start_) {
-    a_max = v_max / ( dt_.seconds());
     t_acc_ = v_max / a_max;
     t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
     un_dir_vec = (position_end_ - position_start_) /
@@ -445,9 +453,9 @@ void CartesianSpaceController::interpolate(double t_curr)
     s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * (t_curr - t_acc_ );
     s_dot = v_max * scale_;
   } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
-    s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * t_flat_ - 0.5 * a_max *
-      (t_curr - t_flat_ - t_acc_) *
-      (t_curr - t_flat_ - t_acc_);
+    s = (position_end_ - position_start_).norm() - 0.5 * a_max *
+      (t_flat_ + 2 * t_acc_ - t_curr) *
+      (t_flat_ + 2 * t_acc_ - t_curr);
     s_dot = v_max * scale_ - a_max * (t_curr - t_flat_ - t_acc_ );
   } else {
     s = (position_end_ - position_start_).norm();

@@ -87,6 +87,7 @@ private:
   Eigen::Vector3d un_dir_vec;
   double t_acc_ = 0.0;
   double t_flat_ = 0.0;
+  double t_align_ = 0.0;
   double t_curr_ = 0.0;
   double v_max = 0.15;
   double a_max = 0.0;

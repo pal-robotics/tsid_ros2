@@ -360,7 +360,7 @@ void TsidPositionControl::DefaultPositionTasks()
   task_joint_posture_->Kd(kd);
   int posture_priority = 1;    // 0 constraint, 1 cost function
   double transition_time = 0.0;
-  double posture_weight = 1e-3;
+  double posture_weight = 1e-2;
 
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
