@@ -98,11 +98,26 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  bounding_boxes_ = {
-    {"arm_left_7_link", {-0.519, 1.069, -0.352, 0.705, 0.0, 1.490}},
-    {"arm_right_7_link", {-0.519, 1.069, -0.705, 0.352, 0.0, 1.490}},
-    {"arm_head_7_link", {-0.666, 0.927, -0.822, 0.791, 0.179, 1.936}},
-  };
+  // Load bounding boxes from parameters
+  for (const auto & ee_name : params_.ee_names) {
+    BoundingBox box;
+    
+    const auto & cube = params_.manipulation_cube.ee_names_map.at(ee_name);
+
+    box.x_min = cube.x_min;
+    box.x_max = cube.x_max;
+    box.y_min = cube.y_min;
+    box.y_max = cube.y_max;
+    box.z_min = cube.z_min;
+    box.z_max = cube.z_max;
+
+    // print the bounding box
+    RCLCPP_INFO(
+      get_node()->get_logger(), "Bounding box for %s: x_min: %f, x_max: %f, y_min: %f, y_max: %f, z_min: %f, z_max: %f",
+      ee_name.c_str(), box.x_min, box.x_max, box.y_min, box.y_max, box.z_min, box.z_max);
+
+    bounding_boxes_[ee_name] = box;
+  }
 
   // Create the state and command interfaces
   state_interfaces_.reserve(3 * joint_names_.size());

@@ -290,3 +290,38 @@ tsid_controllers:
           gt_eq<>: [0],
         }
       }
+  manipulation_cube:
+    __map_ee_names:
+      x_min: {
+        type: double,
+        default_value: 0.0,
+        description: "Minimum x position of the cube",
+      }
+      x_max: {
+        type: double,
+        default_value: 0.0,
+        description: "Maximum x position of the cube",
+      }
+      y_min: {
+        type: double,
+        default_value: 0.0,
+        description: "Minimum y position of the cube",
+      }
+      y_max: {
+        type: double,
+        default_value: 0.0,
+        description: "Maximum y position of the cube",
+      }
+      z_min: {
+        type: double,
+        default_value: 0.0,
+        description: "Minimum z position of the cube",
+      }
+      z_max: {
+        type: double,
+        default_value: 0.0,
+        description: "Maximum z position of the cube",
+      }
+      
+
+
