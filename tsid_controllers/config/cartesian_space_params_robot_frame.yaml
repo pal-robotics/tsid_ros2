@@ -81,23 +81,23 @@ cartesian_space_controller:
 
     cartesian_gain:
          arm_right_7_link:
-          kp_x: 350.0
-          kp_y: 350.0
-          kp_z: 350.0
-          kp_roll: 10.0
-          kp_pitch: 10.0
-          kp_yaw: 10.0
+          kp_x: 300.0
+          kp_y: 300.0
+          kp_z: 300.0
+          kp_roll: 100.0
+          kp_pitch: 100.0
+          kp_yaw: 100.0
           #kp_x: 200.0
           #kp_y: 200.0
           #kp_z: 200.0
           #kp_roll: 70.0
           #kp_pitch: 70.0
           #kp_yaw: 70.0
-          kd_x: 1100.0
-          kd_y: 1100.0
-          kd_z: 1100.0
-          kd_roll: 100.0
-          kd_pitch: 100.0
-          kd_yaw: 100.0
+          kd_x: 2100.0
+          kd_y: 2100.0
+          kd_z: 2100.0
+          kd_roll: 500.0
+          kd_pitch: 500.0
+          kd_yaw: 500.0
           
 
