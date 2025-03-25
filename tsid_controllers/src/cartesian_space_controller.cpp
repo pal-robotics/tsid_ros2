@@ -112,6 +112,8 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
     TsidPositionControl::formulation_->addMotionTask(
       *task_ee_[ee_id_[ee]], ee_weight, ee_priority, transition_time);
+
+
   }
 
   position_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
@@ -240,6 +242,11 @@ CartesianSpaceController::update(
 
   iteration++;
 
+  for (size_t i = 0; i < getParams().ee_names.size(); i++) {
+    ee_names_[i] = getParams().ee_names[i];
+    TsidPositionControl::visualizeBoundingBox(ee_names_[i]);
+    TsidPositionControl::visualizePose(desired_pose_[i]);
+  }
   return controller_interface::return_type::OK;
 }
 
@@ -333,7 +340,7 @@ void CartesianSpaceController::setPoseCallback(
         quat_init_ = h_ee_.rotation();
         std::cout << "position_start_ " << position_start_ << std::endl;
         std::cout << "position_end_ " << position_end_ << std::endl;
-        std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
+        // std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
         position_end_ = desired_pose_[ee_id_[ee]];
 
         compute_trajectory_params();
@@ -348,6 +355,13 @@ void CartesianSpaceController::setPoseCallback(
         current_pose.orientation.w = 1;
 
         publisher_curr_pos->publish(current_pose);
+      }
+
+      if (!TsidPositionControl::isPoseInsideBoundingBox(position_end_, ee_names_[i])) {
+        RCLCPP_WARN(
+        get_node()->get_logger(),
+        "The desired pose is outside the bounding box, the command will be ignored.");
+        position_end_ = position_start_;
       }
     }
     for (auto ee : ee_names_) {
@@ -477,17 +491,17 @@ void CartesianSpaceController::interpolate(double t_curr)
 
 
   pinocchio::Data::Matrix6x J_ee(6, model_.nv);
-  RCLCPP_INFO(
-    get_node()->get_logger(), "Position computed : %f , %f , %f", position_curr_[0],
-    position_curr_[1], position_curr_[2]);
+  // RCLCPP_INFO(
+  //   get_node()->get_logger(), "Position computed : %f , %f , %f", position_curr_[0],
+  //   position_curr_[1], position_curr_[2]);
   pinocchio::computeJointJacobians(
     model_, formulation_->data(), q_prev_pin);
   pinocchio::getJointJacobian(
     model_, formulation_->data(),
     model_.getJointId("arm_right_7_joint"), pinocchio::WORLD, J_ee);
-  RCLCPP_INFO(
-    get_node()->get_logger(), "Velocity computed : %f , %f , %f", vel_curr_[0],
-    vel_curr_[1], vel_curr_[2]);
+  // RCLCPP_INFO(
+  //   get_node()->get_logger(), "Velocity computed : %f , %f , %f", vel_curr_[0],
+  //   vel_curr_[1], vel_curr_[2]);
   const double damp = 1e-6;
 
   pinocchio::Data::Matrix6x J_ee_inv;
