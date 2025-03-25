@@ -68,6 +68,8 @@ private:
   std::vector<std::string> ee_names_;
 
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos;
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_des_pos;
+
   std::vector<Eigen::Vector3d> waypoints_;
   std::vector<Eigen::Quaterniond> orientation_waypoints_;
   size_t current_waypoint_ = 0;

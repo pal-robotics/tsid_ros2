@@ -215,6 +215,18 @@ CartesianSpaceController::update(
 
   publisher_curr_pos->publish(current_pose);
 
+
+  geometry_msgs::msg::Pose desired_pose;
+  desired_pose.position.x = position_end_[0];
+  desired_pose.position.y = position_end_[1];
+  desired_pose.position.z = position_end_[2];
+  desired_pose.orientation.x = quat_des_.x();
+  desired_pose.orientation.y = quat_des_.y();
+  desired_pose.orientation.z = quat_des_.z();
+  desired_pose.orientation.w = quat_des_.w();
+
+  publisher_des_pos->publish(desired_pose);
+
   iteration++;
 
   return controller_interface::return_type::OK;
