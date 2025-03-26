@@ -403,13 +403,20 @@ void TsidVelocityControl::compute_problem_and_set_command(
   q_cmd = q_int_.tail(model_.nq - 7);
 
   auto v_com = v_cmd.tail(model_.nv - 6);
-  double threshold = 0.02;
+  double threshold = 0.2;
 
   int indx = 0;
   joint_limit_reached_ = false;
-  while (!joint_limit_reached_ && indx < (joint_command_names_.size() - 1)) {
+  while (!joint_limit_reached_ && indx < (joint_command_names_.size())) {
 
     auto joint = joint_command_names_[indx];
+
+    if (model_.joints[model_.getJointId(joint)].shortname().find("P") != std::string::npos) {
+      threshold = 0.02;
+    } else if (model_.joints[model_.getJointId(joint)].shortname().find("R") != std::string::npos) {
+      threshold = 0.2;
+    }
+
     if (std::abs(
         q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
         q_min_[model_.getJointId(joint) - 2]) < threshold)
@@ -417,7 +424,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
       RCLCPP_WARN_THROTTLE(
         get_node()->get_logger(), *get_node()->get_clock(), 5000,
         "Joint %ld reached the lower limit: q = %f", model_.getJointId(
-          joint) - 2, q.tail(model_.nq - 7)[model_.getJointId(joint) - 2]);
+          joint) - 2, q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] + 1);
 
       q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
@@ -435,7 +442,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
         get_node()->get_logger(), *get_node()->get_clock(), 5000,
         "Joint %ld reached the upper limit: q = %f", model_.getJointId(
           joint) - 2, q.tail(
-          model_.nq - 7)[model_.getJointId(joint) - 2]);
+          model_.nq - 7)[model_.getJointId(joint) - 2] + 1);
 
       q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
