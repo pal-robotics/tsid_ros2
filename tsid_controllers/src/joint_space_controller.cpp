@@ -34,10 +34,11 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   position_curr_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
   vel_curr_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
 
+  std::string controller_name = get_node()->get_name();
   // Position command
   joint_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-    "tsid_controllers/joint_position_cmd", 1,
+    controller_name + "/joint_position_cmd", 1,
     std::bind(&JointSpaceTsidController::setPositionCb, this, _1));
 
   return TsidPositionControl::on_configure(prev_state);

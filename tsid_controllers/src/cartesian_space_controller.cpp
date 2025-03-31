@@ -74,9 +74,12 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   publisher_des_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
     "tsid_cartesian_controller/desired_pose", 10);
   // Pose reference callback
+
+  std::string controller_name = get_node()->get_name();
+
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
-    "cartesian_space_controller/pose_cmd", 1,
+    controller_name + "/pose_cmd", 1,
     std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
   // print getParams().ee_names.size()
 
