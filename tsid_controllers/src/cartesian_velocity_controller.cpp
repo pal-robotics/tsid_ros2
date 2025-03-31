@@ -63,10 +63,13 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
   publisher_curr_pos_ = get_node()->create_publisher<geometry_msgs::msg::Pose>(
     "current_position", 10);
 
+
+  std::string controller_name = get_node()->get_name();
+
   // Pose reference callback
   ee_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-    "cartesian_velocity_controller/vel_cmd", 1,
+    controller_name + "/vel_cmd", 1,
     std::bind(&CartesianVelocityController::setVelCallback, this, _1));
 
   // Initializing tasks

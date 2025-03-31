@@ -35,9 +35,11 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
   }
 
   // Position command
+  std::string controller_name = get_node()->get_name();
+
   joint_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-    "tsid_controllers/joint_velocity_cmd", 1,
+    controller_name + "/joint_velocity_cmd", 1,
     std::bind(&JointSpaceVelTsidController::setVelocityCb, this, _1));
 
   // Joint Velocity Task
