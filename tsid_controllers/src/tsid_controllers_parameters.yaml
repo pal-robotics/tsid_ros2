@@ -294,22 +294,22 @@ tsid_controllers:
     __map_ee_names:
       x_min: {
         type: double,
-        default_value: 0.0,
+        default_value: -0.2,
         description: "Minimum x position of the cube",
       }
       x_max: {
         type: double,
-        default_value: 0.0,
+        default_value: 0.8,
         description: "Maximum x position of the cube",
       }
       y_min: {
         type: double,
-        default_value: 0.0,
+        default_value: -0.705,
         description: "Minimum y position of the cube",
       }
       y_max: {
         type: double,
-        default_value: 0.0,
+        default_value: 0.22,
         description: "Maximum y position of the cube",
       }
       z_min: {
@@ -319,7 +319,7 @@ tsid_controllers:
       }
       z_max: {
         type: double,
-        default_value: 0.0,
+        default_value: 1.49,
         description: "Maximum z position of the cube",
       }
       
