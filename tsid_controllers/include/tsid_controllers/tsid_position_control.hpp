@@ -125,6 +125,7 @@ private:
 
   Eigen::VectorXd q_prev_;
   Eigen::VectorXd q_int_;
+  Eigen::VectorXd v_int_;
 
 
 };

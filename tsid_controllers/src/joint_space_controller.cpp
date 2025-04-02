@@ -131,6 +131,8 @@ void JointSpaceTsidController::setPositionCb(
   position_end_ = ref;
 
   t_curr_ = 0;
+  first_tsid_iter_ = true;
+
 }
 
 void JointSpaceTsidController::interpolate(double t_curr)
@@ -154,7 +156,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
 
   double a_max;
   double v_max_ = params_.velocity_scaling * v_max;
-  a_max = v_max_ / ( dt_.seconds());
+  a_max = 19;
   t_acc_ = v_max_ / a_max;
 
 

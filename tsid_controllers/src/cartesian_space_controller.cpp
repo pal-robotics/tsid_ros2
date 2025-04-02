@@ -209,15 +209,31 @@ CartesianSpaceController::update(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
-  if (abs(h_ee_.translation()[0] - position_end_[0]) < 0.005 &&
-    abs(h_ee_.translation()[1] - position_end_[1]) < 0.005 &&
-    abs(h_ee_.translation()[2] - position_end_[2]) < 0.005 && t_align_ >= 1.5)
-  {
-    t_align_ = 0.0;
-    first_tsid_iter_ = true;
-  }
-  geometry_msgs::msg::Pose current_pose;
   Eigen::Quaterniond quat_curr(h_ee_.rotation());
+  Eigen::Quaterniond q_diff = quat_des_.inverse() * quat_curr;
+
+  double angleDiff = 2.0 * std::acos(std::abs(q_diff.w()));
+
+  /* if (abs(h_ee_.translation()[0] - position_end_[0]) < 0.005 &&
+     abs(h_ee_.translation()[1] - position_end_[1]) < 0.005 &&
+     abs(h_ee_.translation()[2] - position_end_[2]) < 0.005 &&
+     angleDiff < 0.8 &&
+     t_align_ >= 2.0)
+   {
+     RCLCPP_INFO(
+       get_node()->get_logger(), "anglediff %f", angleDiff);
+     first_tsid_iter_ = true;
+   }
+   if (abs(h_ee_.translation()[0] - position_end_[0]) < 0.002 &&
+     abs(h_ee_.translation()[1] - position_end_[1]) < 0.002 &&
+     abs(h_ee_.translation()[2] - position_end_[2]) < 0.002 &&
+     angleDiff < 0.8)
+   {
+     t_align_ = 0.0;
+     first_tsid_iter_ = true;
+   }*/
+
+  geometry_msgs::msg::Pose current_pose;
   current_pose.position.x = h_ee_.translation()[0];
   current_pose.position.y = h_ee_.translation()[1];
   current_pose.position.z = h_ee_.translation()[2];
@@ -253,6 +269,14 @@ CartesianSpaceController::update(
 void CartesianSpaceController::setPoseCallback(
   tsid_controller_msgs::msg::EePos::ConstSharedPtr msg)
 {
+
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+  state.first[6] = 1.0;
+  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(
+    0.0, state.first,
+    state.second);
+
+
   if (get_node()->get_current_state().id() ==
     lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
   {
@@ -491,17 +515,13 @@ void CartesianSpaceController::interpolate(double t_curr)
 
 
   pinocchio::Data::Matrix6x J_ee(6, model_.nv);
-  RCLCPP_INFO(
-    get_node()->get_logger(), "Position computed : %f , %f , %f", position_curr_[0],
-    position_curr_[1], position_curr_[2]);
+
   pinocchio::computeJointJacobians(
     model_, formulation_->data(), q_prev_pin);
   pinocchio::getJointJacobian(
     model_, formulation_->data(),
     model_.getJointId("arm_right_7_joint"), pinocchio::WORLD, J_ee);
-  RCLCPP_INFO(
-    get_node()->get_logger(), "Velocity computed : %f , %f , %f", vel_curr_[0],
-    vel_curr_[1], vel_curr_[2]);
+
   const double damp = 1e-6;
 
   pinocchio::Data::Matrix6x J_ee_inv;

@@ -396,7 +396,7 @@ void TsidPositionControl::DefaultPositionTasks()
   task_joint_posture_->Kd(kd);
   int posture_priority = 1;    // 0 constraint, 1 cost function
   double transition_time = 0.0;
-  double posture_weight = 1e-2;
+  double posture_weight = 1e-3;
 
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
@@ -411,6 +411,7 @@ void TsidPositionControl::DefaultPositionTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds",
+    *robot_wrapper_, dt_.seconds(), false);
     *robot_wrapper_, dt_.seconds(), false);
   task_joint_bounds_->setTimeStep(dt_.seconds());
 
@@ -436,12 +437,24 @@ void TsidPositionControl::compute_problem_and_set_command(
   const Eigen::VectorXd q,
   const Eigen::VectorXd v)
 {
+  Eigen::VectorXd q_ = Eigen::VectorXd::Zero(model_.nq);
+  q_[6] = 1;
 
   Eigen::VectorXd v_ = Eigen::VectorXd::Zero(model_.nv);
   v_.tail(model_.nq - 7) = (q.tail(model_.nq - 7) - q_prev_) / dt_.seconds();
 
+  if (first_tsid_iter_) {
+    RCLCPP_INFO(
+      get_node()->get_logger(), "position_end %f",
+      task_joint_posture_->getReference().getValue()[0]);
+    q_int_ = q;
+    v_int_ = Eigen::VectorXd::Zero(q_int_.size() - 1);
+    first_tsid_iter_ = false;
+  }
+
+  q_.tail(model_.nq - 7) = q_int_.tail(model_.nq - 7);
   // Computing the problem data
-  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q, v);
+  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q_, v_int_);
   Eigen::VectorXd q_cmd;
   Eigen::VectorXd v_cmd, a;
   Eigen::VectorXd q_int;
@@ -454,17 +467,13 @@ void TsidPositionControl::compute_problem_and_set_command(
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
     v_cmd = v + a * 0.5 * dt_.seconds();
-    if (first_tsid_iter_) {
-      // RCLCPP_INFO(
-      //   get_node()->get_logger(), "position_end %f",
-      //   task_joint_posture_->getReference().getValue()[0]);
-      q_int_ = q;
-      first_tsid_iter_ = false;
-    }
+
 
     // Integrating velocity to get position
     q_int_ = pinocchio::integrate(
       model_, q_int_, v_cmd * dt_.seconds());
+
+    v_int_ = v_cmd;
 
     q_cmd = q_int_.tail(model_.nq - 7);
 
