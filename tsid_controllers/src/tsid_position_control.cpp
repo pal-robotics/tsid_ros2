@@ -412,7 +412,6 @@ void TsidPositionControl::DefaultPositionTasks()
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds",
     *robot_wrapper_, dt_.seconds(), false);
-    *robot_wrapper_, dt_.seconds(), false);
   task_joint_bounds_->setTimeStep(dt_.seconds());
 
   Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
@@ -448,10 +447,11 @@ void TsidPositionControl::compute_problem_and_set_command(
       get_node()->get_logger(), "position_end %f",
       task_joint_posture_->getReference().getValue()[0]);
     q_int_ = q;
-    v_int_ = Eigen::VectorXd::Zero(q_int_.size() - 1);
+    v_int_ = v;
     first_tsid_iter_ = false;
   }
 
+  v_int_.head(6) = Eigen::VectorXd::Zero(6);
   q_.tail(model_.nq - 7) = q_int_.tail(model_.nq - 7);
   // Computing the problem data
   const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q_, v_int_);
@@ -466,7 +466,7 @@ void TsidPositionControl::compute_problem_and_set_command(
     const auto sol = solver_->solve(solverData);
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
-    v_cmd = v + a * 0.5 * dt_.seconds();
+    v_cmd = v_int_ + a * 0.5 * dt_.seconds();
 
 
     // Integrating velocity to get position
