@@ -64,6 +64,8 @@ public:
 
   void setVelCallback(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
 
+  void updateParams() override;
+
 protected:
   const auto & getParams() const {return TsidVelocityControl::params_;}
 

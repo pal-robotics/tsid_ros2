@@ -180,7 +180,7 @@ CartesianVelocityController::update(
 {
 
   // Updating params if new ones are available
-  TsidVelocityControl::updateParams();
+  updateParams();
 
   // Taking current state
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
@@ -237,6 +237,32 @@ void CartesianVelocityController::setVelCallback(
     vel_des[5]);
   std::cout << "setVelCallback" << std::endl;
 }
+
+void CartesianVelocityController::updateParams()
+{
+  TsidVelocityControl::updateParams();
+
+
+  for (auto ee : ee_names_) {
+    auto gain = getParams().cartesian_vel_gain.ee_names_map.at(ee);
+
+    Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd ki_gain = Eigen::VectorXd::Zero(6);
+    kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
+      gain.kp_yaw;
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch,
+      gain.kd_yaw;
+    ki_gain << gain.ki_x, gain.ki_y, gain.ki_z, gain.ki_roll, gain.ki_pitch,
+      gain.ki_yaw;
+    task_ee_[ee_id_[ee]]->Kp(kp_gain);
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
+    task_ee_[ee_id_[ee]]->Ki(ki_gain);
+
+  }
+
+}
+
 
 } // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
