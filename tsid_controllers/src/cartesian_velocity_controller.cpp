@@ -188,6 +188,20 @@ CartesianVelocityController::update(
 
   compute_problem_and_set_command(state.first, state.second);
 
+
+  if (joint_limit_reached_) {
+    for (auto ee : ee_names_) {
+
+      Eigen::VectorXd vel_des = Eigen::VectorXd::Zero(6);
+      vel_des << 0, 0, 0, 0, 0, 0;
+
+      tsid::trajectories::TrajectorySample sample_vel_ee =
+        traj_ee_[ee_id_[ee]].computeNext();
+      sample_vel_ee.setValue(vel_des);
+      task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+    }
+  }
+
   auto h_ee_ = TsidVelocityControl::robot_wrapper_->framePosition(
     TsidVelocityControl::formulation_->data(),
     TsidVelocityControl::model_.getFrameId(ee_names_[0]));
