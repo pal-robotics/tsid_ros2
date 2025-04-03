@@ -414,17 +414,19 @@ void TsidVelocityControl::compute_problem_and_set_command(
     if (model_.joints[model_.getJointId(joint)].shortname().find("P") != std::string::npos) {
       threshold = 0.02;
     } else if (model_.joints[model_.getJointId(joint)].shortname().find("R") != std::string::npos) {
-      threshold = 0.2;
+      threshold = -v.tail(model_.nv - 6)[model_.getJointId(joint) - 2] / (2 * (-20)) + 0.02;
     }
 
     if (std::abs(
         q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
         q_min_[model_.getJointId(joint) - 2]) < threshold)
     {
+
       RCLCPP_WARN_THROTTLE(
         get_node()->get_logger(), *get_node()->get_clock(), 5000,
-        "Joint %ld reached the lower limit: q = %f", model_.getJointId(
-          joint) - 1, q.tail(model_.nq - 7)[model_.getJointId(joint) - 2]);
+        "Joint %s reached the lower limit: q = %f, q_min = %f",
+        joint.c_str(), q.tail(model_.nq - 7)[model_.getJointId(joint) - 2],
+        q_min_[model_.getJointId(joint) - 2]);
 
       q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
@@ -440,9 +442,9 @@ void TsidVelocityControl::compute_problem_and_set_command(
     {
       RCLCPP_WARN_THROTTLE(
         get_node()->get_logger(), *get_node()->get_clock(), 5000,
-        "Joint %ld reached the upper limit: q = %f", model_.getJointId(
-          joint) - 1, q.tail(
-          model_.nq - 7)[model_.getJointId(joint) - 2]);
+        "Joint %s reached the upper limit: q = %f, q_max = %f",
+        joint.c_str(), q.tail(
+          model_.nq - 7)[model_.getJointId(joint) - 2], q_max_[model_.getJointId(joint) - 2]);
 
       q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
