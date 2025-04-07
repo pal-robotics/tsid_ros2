@@ -67,15 +67,14 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     ee_id_.insert(std::make_pair(getParams().ee_names[i], i));
     ee_names_[i] = getParams().ee_names[i];
   }
+  std::string controller_name = get_node()->get_name();
+
   // Creating the publisher for the current position
   publisher_curr_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
-    "current_position", 10);
+    controller_name + "/current_position", 10);
 
   publisher_des_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
     "tsid_cartesian_controller/desired_pose", 10);
-  // Pose reference callback
-
-  std::string controller_name = get_node()->get_name();
 
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(

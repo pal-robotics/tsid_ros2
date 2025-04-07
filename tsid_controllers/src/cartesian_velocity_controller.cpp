@@ -59,12 +59,13 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
   }
 
 
+  std::string controller_name = get_node()->get_name();
+
   //  creating publisher for current pose ee
   publisher_curr_pos_ = get_node()->create_publisher<geometry_msgs::msg::Pose>(
-    "current_position", 10);
+    controller_name + "/current_position", 10);
 
 
-  std::string controller_name = get_node()->get_name();
 
   // Pose reference callback
   ee_cmd_sub_ =
@@ -233,12 +234,10 @@ void CartesianVelocityController::setVelCallback(
       "The vel command should have 6 elements");
     return;
   }
-  std::cout << "setVelCallback" << std::endl;
   auto ee = params_.ee_names[0];
   Eigen::VectorXd vel_des = Eigen::VectorXd::Zero(6);
   vel_des << msg->data[0], msg->data[1], msg->data[2], msg->data[3],
     msg->data[4], msg->data[5];
-  std::cout << "setVelCallback" << std::endl;
 
   tsid::trajectories::TrajectorySample sample_vel_ee =
     traj_ee_[ee_id_[ee]].computeNext();
@@ -249,7 +248,6 @@ void CartesianVelocityController::setVelCallback(
     get_node()->get_logger(), "Desired velocity: %f %f %f %f %f %f",
     vel_des[0], vel_des[1], vel_des[2], vel_des[3], vel_des[4],
     vel_des[5]);
-  std::cout << "setVelCallback" << std::endl;
 }
 
 void CartesianVelocityController::updateParams()
