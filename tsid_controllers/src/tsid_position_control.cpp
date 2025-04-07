@@ -454,7 +454,7 @@ void TsidPositionControl::compute_problem_and_set_command(
   v_int_.head(6) = Eigen::VectorXd::Zero(6);
   q_.tail(model_.nq - 7) = q_int_.tail(model_.nq - 7);
   // Computing the problem data
-  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q_, v_int_);
+  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(0.0, q_, v);
   Eigen::VectorXd q_cmd;
   Eigen::VectorXd v_cmd, a;
   Eigen::VectorXd q_int;
@@ -466,7 +466,7 @@ void TsidPositionControl::compute_problem_and_set_command(
     const auto sol = solver_->solve(solverData);
     // Integrating acceleration to get velocity
     a = formulation_->getAccelerations(sol);
-    v_cmd = v_int_ + a * 0.5 * dt_.seconds();
+    v_cmd = v + a * 0.5 * dt_.seconds();
 
 
     // Integrating velocity to get position
