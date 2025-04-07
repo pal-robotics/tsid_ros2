@@ -209,29 +209,6 @@ CartesianSpaceController::update(
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
   Eigen::Quaterniond quat_curr(h_ee_.rotation());
-  Eigen::Quaterniond q_diff = quat_des_.inverse() * quat_curr;
-
-  double angleDiff = 2.0 * std::acos(std::abs(q_diff.w()));
-
-  /* if (abs(h_ee_.translation()[0] - position_end_[0]) < 0.005 &&
-     abs(h_ee_.translation()[1] - position_end_[1]) < 0.005 &&
-     abs(h_ee_.translation()[2] - position_end_[2]) < 0.005 &&
-     angleDiff < 0.8 &&
-     t_align_ >= 2.0)
-   {
-     RCLCPP_INFO(
-       get_node()->get_logger(), "anglediff %f", angleDiff);
-     first_tsid_iter_ = true;
-   }
-   if (abs(h_ee_.translation()[0] - position_end_[0]) < 0.002 &&
-     abs(h_ee_.translation()[1] - position_end_[1]) < 0.002 &&
-     abs(h_ee_.translation()[2] - position_end_[2]) < 0.002 &&
-     angleDiff < 0.8)
-   {
-     t_align_ = 0.0;
-     first_tsid_iter_ = true;
-   }*/
-
   geometry_msgs::msg::Pose current_pose;
   current_pose.position.x = h_ee_.translation()[0];
   current_pose.position.y = h_ee_.translation()[1];
@@ -279,7 +256,7 @@ void CartesianSpaceController::setPoseCallback(
   if (get_node()->get_current_state().id() ==
     lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
   {
-    for (int i = 0; i < msg->ee_name.size(); i++) {
+    for (size_t i = 0; i < msg->ee_name.size(); i++) {
       if (std::find(ee_names_.begin(), ee_names_.end(), msg->ee_name[i]) ==
         ee_names_.end())
       {
@@ -382,8 +359,8 @@ void CartesianSpaceController::setPoseCallback(
 
       if (!TsidPositionControl::isPoseInsideBoundingBox(position_end_, ee_names_[i])) {
         RCLCPP_WARN(
-        get_node()->get_logger(),
-        "The desired pose is outside the bounding box, the command will be ignored.");
+          get_node()->get_logger(),
+          "The desired pose is outside the bounding box, the command will be ignored.");
         position_end_ = position_start_;
       }
     }

@@ -39,7 +39,7 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include <tsid_controllers_params.hpp>
+#include "tsid_controllers/tsid_controllers_params.hpp"
 #include <visualization_msgs/msg/marker.hpp>
 #include <unordered_map>
 
@@ -67,7 +67,7 @@ public:
   state_interface_configuration() const override;
 
   controller_interface::return_type
-  update(const rclcpp::Time & time, const rclcpp::Duration & period) override
+  update(const rclcpp::Time &, const rclcpp::Duration &) override
   {
     return controller_interface::return_type::OK;
   }

@@ -26,7 +26,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include <tsid_controllers_params.hpp>
 #include "tsid_controllers/tasks/task-se3-equality.hpp"
 
 namespace tsid_controllers

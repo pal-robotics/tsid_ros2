@@ -81,24 +81,30 @@ cartesian_space_controller:
 
     cartesian_gain:
          arm_right_7_link:
-          kp_x: 350.0
-          kp_y: 350.0
-          kp_z: 350.0
-          kp_roll: 10.0
-          kp_pitch: 10.0
-          kp_yaw: 10.0
-          #kp_x: 200.0
-          #kp_y: 200.0
-          #kp_z: 200.0
+          kp_x: 400.0
+          kp_y: 400.0
+          kp_z: 400.0
+          kp_roll: 50.0
+          kp_pitch: 50.0
+          kp_yaw: 50.0
+          #kp_x: 500.0
+          #kp_y: 500.0
+          #kp_z: 500.0
           #kp_roll: 70.0
           #kp_pitch: 70.0
           #kp_yaw: 70.0
-          kd_x: 1100.0
-          kd_y: 1100.0
-          kd_z: 1100.0
-          kd_roll: 100.0
-          kd_pitch: 100.0
-          kd_yaw: 100.0
+          kd_x: 1000.0
+          kd_y: 1000.0
+          kd_z: 1000.0
+          kd_roll: 200.0
+          kd_pitch: 200.0
+          kd_yaw: 200.0
+          #kd_x: 50.0
+          #kd_y: 50.0
+          #kd_z: 50.0
+          #kd_roll: 25.0
+          #kd_pitch: 25.0
+          #kd_yaw: 25.0
 
     manipulation_cube:
          arm_right_7_link:      
