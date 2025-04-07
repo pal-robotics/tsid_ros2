@@ -222,7 +222,7 @@ const ConstraintBase & TaskSE3Equality::compute(
 
   int idx = 0;
   for (int i = 0; i < 6; i++) {
-    if (m_mask(i) != 1.) {continue;}
+    if (std::abs(m_mask(i) - 1.0) > std::numeric_limits<double>::epsilon()) {continue;}
 
     m_constraint.matrix().row(idx) = m_J.row(i);
     m_constraint.vector().row(idx) = (m_a_des - m_drift.toVector()).row(i);

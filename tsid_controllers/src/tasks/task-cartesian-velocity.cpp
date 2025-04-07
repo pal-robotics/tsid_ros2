@@ -105,7 +105,7 @@ void TaskCartesianVelocity::setReference(TrajectorySample & ref)
   // m_M_ref.translation(ref.pos.head<3>());
   // m_M_ref.rotation(MapMatrix3(&ref.pos(3), 3, 3));
   TSID_DISABLE_WARNING_POP
-    m_v_ref = ref.pos;
+    m_v_ref = ref.getValue();
   m_a_ref = Motion(ref.getDerivative());
   first = true;
 }
@@ -209,7 +209,7 @@ const ConstraintBase & TaskCartesianVelocity::compute(
 
   int idx = 0;
   for (int i = 0; i < 6; i++) {
-    if (m_mask(i) != 1.) {continue;}
+    if (std::abs(m_mask(i) - 1.0) > std::numeric_limits<double>::epsilon()) {continue;}
 
     m_constraint.matrix().row(idx) = m_J.row(i);
     m_constraint.vector().row(idx) = (m_a_des ).row(i);
