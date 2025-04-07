@@ -23,7 +23,6 @@
 #include "tsid_controllers/tsid_position_control.hpp"
 #include <controller_interface/controller_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <tsid_controllers_params.hpp>
 
 namespace tsid_controllers
 {

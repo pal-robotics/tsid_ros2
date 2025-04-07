@@ -146,7 +146,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
   int maxDiffIndex = 0;
   double maxDiff = std::abs(position_end_[0] - position_start_[0]);
 
-  for (size_t i = 1; i < position_start_.size(); ++i) {
+  for (Eigen::Index i = 1; i < position_start_.size(); ++i) {
     double currentDiff = std::abs(position_end_[i] - position_start_[i]);
     if (currentDiff > maxDiff) {
       maxDiff = currentDiff;

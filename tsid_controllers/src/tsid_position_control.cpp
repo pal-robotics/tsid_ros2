@@ -272,8 +272,6 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
 
   q0 = state.first;
-  //v0 = state.second;
-
   q_prev_ = q0.tail(robot_wrapper_->nq() - 7);
 
   formulation_->computeProblemData(0.0, q0, v0);
@@ -282,14 +280,12 @@ controller_interface::CallbackReturn TsidPositionControl::on_activate(
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
 
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn TsidPositionControl::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  // reset command buffer
+{ // reset command interfaces
   release_interfaces();
   for (auto joint : params_.joint_state_names) {
     joint_state_interfaces_[jnt_id_[joint]].clear();
@@ -357,13 +353,11 @@ void TsidPositionControl::updateParams()
 
       bounding_boxes_[ee_name] = box;
     }
-
   }
 }
 
 void TsidPositionControl::DefaultPositionTasks()
 {
-
   // Joint Posture Task
   task_joint_posture_ =
     new tsid::tasks::TaskJointPosture("task-joint-posture", *robot_wrapper_);

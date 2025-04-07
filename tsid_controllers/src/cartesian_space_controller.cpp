@@ -483,52 +483,6 @@ void CartesianSpaceController::interpolate(double t_curr)
 
   position_curr_ = position_start_ + s * un_dir_vec;
   vel_curr_ = s_dot * un_dir_vec;
-
-
-  Eigen::VectorXd q_prev_pin = Eigen::VectorXd::Zero(model_.nq);
-  q_prev_pin.tail(model_.nq - 7) = position_curr_joint_;
-  q_prev_pin[6] = 1.0;
-
-
-  pinocchio::Data::Matrix6x J_ee(6, model_.nv);
-
-  pinocchio::computeJointJacobians(
-    model_, formulation_->data(), q_prev_pin);
-  pinocchio::getJointJacobian(
-    model_, formulation_->data(),
-    model_.getJointId("arm_right_7_joint"), pinocchio::WORLD, J_ee);
-
-  const double damp = 1e-6;
-
-  pinocchio::Data::Matrix6x J_ee_inv;
-  J_ee_inv.noalias() = (J_ee * J_ee.transpose());
-  J_ee_inv.diagonal().array() += damp;
-
-
-  Eigen::VectorXd v_pin(model_.nv);
-  Eigen::VectorXd q_pin = pinocchio::neutral(model_);
-  Eigen::VectorXd vel_ee = Eigen::VectorXd::Zero(6);
-  vel_ee << vel_curr_, Eigen::Vector3d::Zero();
-  v_pin.noalias() = -J_ee.transpose() * J_ee_inv.ldlt().solve(vel_ee);
-  q_pin = pinocchio::integrate(
-    model_, q_prev_pin,
-    v_pin * dt_.seconds());
-
-
-  for (auto joint : params_.joint_command_names) {
-    position_curr_joint_[jnt_id_[joint]] =
-      q_pin.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2];
-    vel_curr_joint_[jnt_id_[joint]] =
-      v_pin.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) - 2];
-    /* RCLCPP_INFO(
-       get_node()->get_logger(), "Joint %s position computed : %f",
-       joint.c_str(), position_curr_joint_[jnt_id_[joint]]);
-     RCLCPP_INFO(
-       get_node()->get_logger(), "Joint %s velocity computed : %f",
-       joint.c_str(), vel_curr_joint_[jnt_id_[joint]]);*/
-  }
-
-
 }
 
 void CartesianSpaceController::updateParams()
