@@ -47,28 +47,6 @@ target_include_directories(tsid_controllers PUBLIC
 pluginlib_export_plugin_description_file(controller_interface tsid_controllers.xml)
 
 # if(BUILD_TESTING)
-#   find_package(ament_cmake_gmock REQUIRED)
-#   find_package(ament_lint_auto REQUIRED)
-#   # the following line skips the linter which checks for copyrights
-#   # comment the line when a copyright and license is added to all source files
-#   set(ament_cmake_copyright_FOUND TRUE)
-#   # the following line skips cpplint (only works in a git repo)
-#   # comment the line when this package is in a git repo and when
-#   # a copyright and license is added to all source files
-#   set(ament_cmake_cpplint_FOUND TRUE)
-
-#   ament_add_gmock(test_dynamic_tsid_controller
-#   test/dynamic_tsid_controller_test.cpp
-#   )
-
-#   target_include_directories(test_dynamic_tsid_controller PUBLIC
-#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#   $<INSTALL_INTERFACE:include>
-#   )
-
-#   target_link_libraries(test_dynamic_tsid_controller
-#   ${PROJECT_NAME}  ${EIGEN3_LIBRARIES}
-#   )
 
 # endif()
 
