@@ -23,7 +23,6 @@
 #include "tsid_controllers/tasks/task-vel-joint.hpp"
 #include "tsid_controllers/tsid_velocity_control.hpp"
 #include <controller_interface/controller_interface.hpp>
-#include <tsid_controllers_params.hpp>
 
 namespace tsid_controllers
 {

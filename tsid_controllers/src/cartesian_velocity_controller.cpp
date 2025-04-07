@@ -66,7 +66,6 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     controller_name + "/current_position", 10);
 
 
-
   // Pose reference callback
   ee_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(

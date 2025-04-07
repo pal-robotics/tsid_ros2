@@ -81,7 +81,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
     joint_command_names_ = params_.joint_state_names;
   } else {
     joint_command_names_.resize(params_.joint_command_names.size());
-    for (int i = 0; i < params_.joint_command_names.size(); i++) {
+    for (size_t i = 0; i < params_.joint_command_names.size(); i++) {
       size_t start = params_.joint_command_names[i].find("/");
       if (start != std::string::npos) {
         auto joint = params_.joint_command_names[i].substr(start + 1);
@@ -248,7 +248,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_activate(
     RCLCPP_INFO(
       get_node()->get_logger(), "Joint %s position: %f",
       joint.c_str(),
-      joint_state_interfaces_[jnt_id_[joint]][0].get().get_value());
+      joint_state_interfaces_[jnt_id_[joint]][0].get().get_optional().value());
   }
 
   // Taking initial position from the joint state interfaces
@@ -292,11 +292,11 @@ TsidVelocityControl::getActualState() const
     q.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2] =
       joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::position]
       .get()
-      .get_value();
+      .get_optional().value();
     v.tail(robot_wrapper_->nv() - 6)[model_.getJointId(joint) - 2] =
       joint_state_interfaces_[jnt_id_.at(joint)][Interfaces::velocity]
       .get()
-      .get_value();
+      .get_optional().value();
   }
 
   return std::make_pair(q, v);
@@ -351,7 +351,7 @@ void TsidVelocityControl::DefaultVelocityTasks()
   q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6);
   q_max_ = model_.upperPositionLimit.tail(model_.nv - 6);
 
-  for (int i = 0; i < q_max_.size(); i++) {
+  for (Eigen::Index i = 0; i < q_max_.size(); i++) {
     std::cout << "q_max" << q_max_[i] << std::endl;
     std::cout << "q_min" << q_min_[i] << std::endl;
   }
@@ -407,7 +407,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
   int indx = 0;
   joint_limit_reached_ = false;
-  while (!joint_limit_reached_ && indx < (joint_command_names_.size())) {
+  while (!joint_limit_reached_ && indx < static_cast<int>(joint_command_names_.size())) {
 
     auto joint = joint_command_names_[indx];
 
@@ -465,26 +465,34 @@ void TsidVelocityControl::compute_problem_and_set_command(
         get_node()->get_logger(), *get_node()->get_clock(), 5000,
         "Joint limit reached");
 
-      command_interfaces_[jnt_command_id_[joint]].set_value(
-        0.0);
+      if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+          0.0))
+      {
+        RCLCPP_ERROR(
+          get_node()->get_logger(),
+          "Failed to set command for joint %s", joint.c_str());
+      }
     } else {
-
-      command_interfaces_[jnt_command_id_[joint]].set_value(
-        v_com[model_.getJointId(joint) - 2]);
-
+      if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+          v_com[model_.getJointId(joint) - 2]))
+      {
+        RCLCPP_ERROR(
+          get_node()->get_logger(),
+          "Failed to set command for joint %s", joint.c_str());
+      }
     }
   }
 
   q_prev_ = q.tail(model_.nq - 7);
   std_msgs::msg::Float64MultiArray pub;
 
-  for (int i = 0; i < v_com.size(); i++) {
+  for (Eigen::Index i = 0; i < v_com.size(); i++) {
     pub.data.push_back(v_com[i]);
   }
   publisher_curr_vel_->publish(pub);
 
   std_msgs::msg::Float64MultiArray pub_pos;
-  for (int i = 0; i < q_cmd.size(); i++) {
+  for (Eigen::Index i = 0; i < q_cmd.size(); i++) {
     pub_pos.data.push_back(q_cmd[i]);
   }
   publisher_curr_pos_->publish(pub_pos);

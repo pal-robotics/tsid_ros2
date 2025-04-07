@@ -21,7 +21,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <controller_interface/controller_interface.hpp>
-#include <tsid_controllers_params.hpp>
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "tsid_controllers/tsid_position_control.hpp"
 #include <math.h>
@@ -55,9 +54,9 @@ private:
   Eigen::VectorXd initial_velocity_;
   std::string interface_name_;
   double t_curr_ = 0.0;
-  double sin_amplitude_;  // Amplitude 
-  double sin_frequency_ ; // Frequency
-  double sin_phase_ ;
+  double sin_amplitude_;  // Amplitude
+  double sin_frequency_;  // Frequency
+  double sin_phase_;
 
 };
 }

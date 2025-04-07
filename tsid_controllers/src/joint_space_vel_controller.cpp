@@ -96,7 +96,7 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_activate(
 
   for (const auto & joint : params_.joint_state_names) {
     q0.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2] =
-      joint_state_interfaces_[jnt_id_[joint]][0].get().get_value();
+      joint_state_interfaces_[jnt_id_[joint]][0].get().get_optional().value();
   }
 
   formulation_->computeProblemData(0.0, q0, v0);
