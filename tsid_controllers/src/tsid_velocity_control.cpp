@@ -348,8 +348,8 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds", *robot_wrapper_, dt_.seconds(), false);
-  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6);
-  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6);
+  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6) + 0.07;
+  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6) - 0.07;
 
   for (Eigen::Index i = 0; i < q_max_.size(); i++) {
     std::cout << "q_max" << q_max_[i] << std::endl;
@@ -414,7 +414,10 @@ void TsidVelocityControl::compute_problem_and_set_command(
     if (model_.joints[model_.getJointId(joint)].shortname().find("P") != std::string::npos) {
       threshold = 0.02;
     } else if (model_.joints[model_.getJointId(joint)].shortname().find("R") != std::string::npos) {
-      threshold = -v.tail(model_.nv - 6)[model_.getJointId(joint) - 2] / (2 * (-20)) + 0.02;
+      double v_curr =
+        v.tail(model_.nv - 6)[model_.getJointId(joint) - 2];
+      threshold =
+        -(v_curr * v_curr) / (2 * (-20)) + 0.02;
     }
 
     if (std::abs(
