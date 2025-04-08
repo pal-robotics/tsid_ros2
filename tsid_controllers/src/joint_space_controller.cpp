@@ -34,10 +34,11 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
   position_curr_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
   vel_curr_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
 
+  std::string controller_name = get_node()->get_name();
   // Position command
   joint_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-    "tsid_controllers/joint_position_cmd", 1,
+    controller_name + "/joint_position_cmd", 1,
     std::bind(&JointSpaceTsidController::setPositionCb, this, _1));
 
   return TsidPositionControl::on_configure(prev_state);
@@ -130,6 +131,8 @@ void JointSpaceTsidController::setPositionCb(
   position_end_ = ref;
 
   t_curr_ = 0;
+  first_tsid_iter_ = true;
+
 }
 
 void JointSpaceTsidController::interpolate(double t_curr)
@@ -143,7 +146,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
   int maxDiffIndex = 0;
   double maxDiff = std::abs(position_end_[0] - position_start_[0]);
 
-  for (size_t i = 1; i < position_start_.size(); ++i) {
+  for (Eigen::Index i = 1; i < position_start_.size(); ++i) {
     double currentDiff = std::abs(position_end_[i] - position_start_[i]);
     if (currentDiff > maxDiff) {
       maxDiff = currentDiff;
@@ -153,7 +156,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
 
   double a_max;
   double v_max_ = params_.velocity_scaling * v_max;
-  a_max = v_max_ / ( 2 * dt_.seconds());
+  a_max = 19;
   t_acc_ = v_max_ / a_max;
 
 
@@ -161,7 +164,7 @@ void JointSpaceTsidController::interpolate(double t_curr)
   double s_dot = 0;
 
   t_flat_ =
-    ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max_ * t_acc_) /
+    (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex]) - v_max_ * t_acc_) /
     v_max_;
 
   // Computation of a trapezoidal trajectory
@@ -170,26 +173,30 @@ void JointSpaceTsidController::interpolate(double t_curr)
       s = 0.5 * a_max * t_curr * t_curr;
       s_dot = a_max * t_curr;
     } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
-      s = 0.5 * a_max * t_acc_ * t_acc_ + v_max_ *
-        ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) * (t_curr - t_acc_ );
-      s_dot = v_max_ * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex]));
+      s = v_max_ *
+        (std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) *
+        (t_curr - t_acc_ / 2 );
+      s_dot = v_max_ * (std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex]));
     } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
-      s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) -
+      s = std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) -
         0.5 * a_max *
         (t_flat_ + 2 * t_acc_ - t_curr) *
         (t_flat_ + 2 * t_acc_ - t_curr);
-      s_dot = v_max_ * ((position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
-        ((position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) - a_max *
+      s_dot = v_max_ * (std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]])) /
+        (std::abs(position_end_[maxDiffIndex] - position_start_[maxDiffIndex])) - a_max *
         (t_curr - t_flat_ - t_acc_);
     } else {
-      s = (position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]);
+      s = std::abs(position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]);
       s_dot = 0;
     }
-    position_curr_[jnt_id_[joint]] = position_start_[jnt_id_[joint]] + s;
-    vel_curr_[jnt_id_[joint]] = s_dot;
+    position_curr_[jnt_id_[joint]] = position_start_[jnt_id_[joint]] +
+      copysign(1, position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) * s;
+    vel_curr_[jnt_id_[joint]] =
+      copysign(1, position_end_[jnt_id_[joint]] - position_start_[jnt_id_[joint]]) * s_dot;
   }
+
 
 }
 

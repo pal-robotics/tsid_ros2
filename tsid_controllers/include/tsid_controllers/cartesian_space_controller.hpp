@@ -26,7 +26,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include <tsid_controllers_params.hpp>
+#include "tsid_controllers/tasks/task-se3-equality.hpp"
 
 namespace tsid_controllers
 {
@@ -67,6 +67,8 @@ private:
   std::vector<std::string> ee_names_;
 
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos;
+  rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_des_pos;
+
   std::vector<Eigen::Vector3d> waypoints_;
   std::vector<Eigen::Quaterniond> orientation_waypoints_;
   size_t current_waypoint_ = 0;
@@ -76,12 +78,15 @@ private:
   Eigen::Vector3d position_start_;
   Eigen::Vector3d position_end_;
   Eigen::Vector3d position_curr_;
+  Eigen::VectorXd position_curr_joint_;
+  Eigen::VectorXd vel_curr_joint_;
   Eigen::Quaterniond quat_init_;
   Eigen::Quaterniond quat_des_;
   Eigen::Vector3d vel_curr_;
   Eigen::Vector3d un_dir_vec;
   double t_acc_ = 0.0;
   double t_flat_ = 0.0;
+  double t_align_ = 0.0;
   double t_curr_ = 0.0;
   double v_max = 0.15;
   double a_max = 0.0;

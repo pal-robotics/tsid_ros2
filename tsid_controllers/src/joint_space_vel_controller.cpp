@@ -35,9 +35,11 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
   }
 
   // Position command
+  std::string controller_name = get_node()->get_name();
+
   joint_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-    "tsid_controllers/joint_velocity_cmd", 1,
+    controller_name + "/joint_velocity_cmd", 1,
     std::bind(&JointSpaceVelTsidController::setVelocityCb, this, _1));
 
   // Joint Velocity Task
@@ -94,7 +96,7 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_activate(
 
   for (const auto & joint : params_.joint_state_names) {
     q0.tail(robot_wrapper_->nq() - 7)[model_.getJointId(joint) - 2] =
-      joint_state_interfaces_[jnt_id_[joint]][0].get().get_value();
+      joint_state_interfaces_[jnt_id_[joint]][0].get().get_optional().value();
   }
 
   formulation_->computeProblemData(0.0, q0, v0);

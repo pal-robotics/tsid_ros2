@@ -42,7 +42,6 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include <tsid_controllers_params.hpp>
 
 namespace tsid_controllers
 {
@@ -63,6 +62,8 @@ public:
   on_activate(const rclcpp_lifecycle::State & previous_state) override;
 
   void setVelCallback(std_msgs::msg::Float64MultiArray::ConstSharedPtr msg);
+
+  void updateParams() override;
 
 protected:
   const auto & getParams() const {return TsidVelocityControl::params_;}

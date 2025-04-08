@@ -39,12 +39,19 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include <tsid_controllers_params.hpp>
+#include "tsid_controllers/tsid_controllers_params.hpp"
+#include <visualization_msgs/msg/marker.hpp>
+#include <unordered_map>
 
 namespace tsid_controllers
 {
 BETTER_ENUM(Interfaces, int, position = 0, velocity = 1, effort = 2);
-
+struct BoundingBox
+{
+  double x_min, x_max;
+  double y_min, y_max;
+  double z_min, z_max;
+};
 class TsidPositionControl : public controller_interface::ControllerInterface
 {
 public:
@@ -60,7 +67,7 @@ public:
   state_interface_configuration() const override;
 
   controller_interface::return_type
-  update(const rclcpp::Time & time, const rclcpp::Duration & period) override
+  update(const rclcpp::Time &, const rclcpp::Duration &) override
   {
     return controller_interface::return_type::OK;
   }
@@ -76,6 +83,9 @@ public:
   std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
 
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
+  bool isPoseInsideBoundingBox(const Eigen::Vector3d & pose, const std::string & effector_name);
+  void visualizePose(const Eigen::Vector3d & pose);
+  void visualizeBoundingBox(const std::string & effector_name);
 
 protected:
   template<typename T>
@@ -96,6 +106,9 @@ protected:
   std::map<std::string, int> jnt_command_id_;
   tsid::tasks::TaskJointPosture * task_joint_posture_;
   rclcpp::Duration dt_;
+  Eigen::VectorXd position_end_;
+  bool first_tsid_iter_;
+  std::unordered_map<std::string, BoundingBox> bounding_boxes_;
 
 private:
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
@@ -107,9 +120,13 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_current;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr box_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_pub_;
+
   Eigen::VectorXd q_prev_;
   Eigen::VectorXd q_int_;
-  bool first_tsid_iter_;
+  Eigen::VectorXd v_int_;
+
 
 };
 } // namespace tsid_controllers

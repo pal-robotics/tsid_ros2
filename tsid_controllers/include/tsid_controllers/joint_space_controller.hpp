@@ -23,7 +23,6 @@
 #include "tsid_controllers/tsid_position_control.hpp"
 #include <controller_interface/controller_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <tsid_controllers_params.hpp>
 
 namespace tsid_controllers
 {
@@ -55,7 +54,6 @@ private:
   double v_max = 2.5;
 
   Eigen::VectorXd position_start_;
-  Eigen::VectorXd position_end_;
   Eigen::VectorXd position_curr_;
   Eigen::VectorXd vel_curr_;
 

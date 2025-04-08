@@ -16,6 +16,11 @@
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include <pluginlib/class_list_macros.hpp>
+ #include "pinocchio/parsers/sample-models.hpp"
+ #include "pinocchio/spatial/explog.hpp"
+ #include "pinocchio/algorithm/kinematics.hpp"
+ #include "pinocchio/algorithm/jacobian.hpp"
+ #include "pinocchio/algorithm/joint-configuration.hpp"
 
 using namespace controller_interface;
 namespace tsid_controllers
@@ -62,14 +67,18 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     ee_id_.insert(std::make_pair(getParams().ee_names[i], i));
     ee_names_[i] = getParams().ee_names[i];
   }
+  std::string controller_name = get_node()->get_name();
+
   // Creating the publisher for the current position
   publisher_curr_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
-    "current_position", 10);
+    controller_name + "/current_position", 10);
 
-  // Pose reference callback
+  publisher_des_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
+    "tsid_cartesian_controller/desired_pose", 10);
+
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
-    "cartesian_space_controller/pose_cmd", 1,
+    controller_name + "/pose_cmd", 1,
     std::bind(&CartesianSpaceController::setPoseCallback, this, _1));
   // print getParams().ee_names.size()
 
@@ -81,11 +90,16 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
     auto gain = getParams().cartesian_gain.ee_names_map.at(ee);
     Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+
     kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
       gain.kp_yaw;
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch,
+      gain.kd_yaw;
+
     task_ee_[ee_id_[ee]]->Kp(kp_gain);
 
-    task_ee_[ee_id_[ee]]->Kd(2.0 * task_ee_[ee_id_[ee]]->Kp().cwiseSqrt());
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
 
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
@@ -97,7 +111,13 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
 
     TsidPositionControl::formulation_->addMotionTask(
       *task_ee_[ee_id_[ee]], ee_weight, ee_priority, transition_time);
+
+
   }
+
+  position_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
+  vel_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
+
 
   v_max = params_.ee_vmax;
 
@@ -140,6 +160,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
       H_ee_0_[ee_id_[ee]].translation()[2]);
   }
 
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+  position_curr_joint_ = state.first.tail(robot_wrapper_->nq() - 7);
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -149,12 +172,22 @@ CartesianSpaceController::update(
   const rclcpp::Duration & /*period*/)
 {
   t_curr_ = t_curr_ + dt_.seconds();
-  TsidPositionControl::updateParams();
+
+  t_align_ = t_align_ + dt_.seconds();
+
+  updateParams();
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
 
   // if (iteration % 4 == 0) {
   interpolate(t_curr_);
+
+  /*tsid::trajectories::TrajectorySample sample_posture_joint(position_curr_joint_.size());
+  sample_posture_joint.setValue(position_curr_joint_);
+  sample_posture_joint.setDerivative(vel_curr_joint_);
+
+  task_joint_posture_->setReference(sample_posture_joint);*/
+
 
   Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
 
@@ -175,8 +208,8 @@ CartesianSpaceController::update(
     TsidPositionControl::formulation_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
-  geometry_msgs::msg::Pose current_pose;
   Eigen::Quaterniond quat_curr(h_ee_.rotation());
+  geometry_msgs::msg::Pose current_pose;
   current_pose.position.x = h_ee_.translation()[0];
   current_pose.position.y = h_ee_.translation()[1];
   current_pose.position.z = h_ee_.translation()[2];
@@ -187,18 +220,43 @@ CartesianSpaceController::update(
 
   publisher_curr_pos->publish(current_pose);
 
+
+  geometry_msgs::msg::Pose desired_pose;
+  desired_pose.position.x = position_end_[0];
+  desired_pose.position.y = position_end_[1];
+  desired_pose.position.z = position_end_[2];
+  desired_pose.orientation.x = quat_des_.x();
+  desired_pose.orientation.y = quat_des_.y();
+  desired_pose.orientation.z = quat_des_.z();
+  desired_pose.orientation.w = quat_des_.w();
+
+  publisher_des_pos->publish(desired_pose);
+
   iteration++;
 
+  for (size_t i = 0; i < getParams().ee_names.size(); i++) {
+    ee_names_[i] = getParams().ee_names[i];
+    TsidPositionControl::visualizeBoundingBox(ee_names_[i]);
+    TsidPositionControl::visualizePose(desired_pose_[i]);
+  }
   return controller_interface::return_type::OK;
 }
 
 void CartesianSpaceController::setPoseCallback(
   tsid_controller_msgs::msg::EePos::ConstSharedPtr msg)
 {
+
+  std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
+  state.first[6] = 1.0;
+  const tsid::solvers::HQPData solverData = formulation_->computeProblemData(
+    0.0, state.first,
+    state.second);
+
+
   if (get_node()->get_current_state().id() ==
     lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
   {
-    for (int i = 0; i < msg->ee_name.size(); i++) {
+    for (size_t i = 0; i < msg->ee_name.size(); i++) {
       if (std::find(ee_names_.begin(), ee_names_.end(), msg->ee_name[i]) ==
         ee_names_.end())
       {
@@ -260,8 +318,13 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
-          // pinocchio::SE3 se3(rot_des_, desired_pose_[ee_id_[ee]]);
-          // tsid::math::SE3ToVector(se3, ref);
+          Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
+
+          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
+          tsid::math::SE3ToVector(se3, ref);
+
+          rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
+
         }
 
         tsid::trajectories::TrajectorySample sample_posture_ee =
@@ -274,9 +337,10 @@ void CartesianSpaceController::setPoseCallback(
 
         t_curr_ = 0.0;
         position_start_ = h_ee_.translation();
+        quat_init_ = h_ee_.rotation();
         std::cout << "position_start_ " << position_start_ << std::endl;
         std::cout << "position_end_ " << position_end_ << std::endl;
-        std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
+        // std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
         position_end_ = desired_pose_[ee_id_[ee]];
 
         compute_trajectory_params();
@@ -291,6 +355,13 @@ void CartesianSpaceController::setPoseCallback(
         current_pose.orientation.w = 1;
 
         publisher_curr_pos->publish(current_pose);
+      }
+
+      if (!TsidPositionControl::isPoseInsideBoundingBox(position_end_, ee_names_[i])) {
+        RCLCPP_WARN(
+          get_node()->get_logger(),
+          "The desired pose is outside the bounding box, the command will be ignored.");
+        position_end_ = position_start_;
       }
     }
     for (auto ee : ee_names_) {
@@ -325,18 +396,19 @@ void CartesianSpaceController::setPoseCallback(
       "Controller is not active, the command will be ignored");
   }
   iteration = 0;
+  first_tsid_iter_ = true;
+
 }
 
 void CartesianSpaceController::compute_trajectory_params()
 {
   t_acc_ = 0.0;
   t_flat_ = 0.0;
-  a_max = 0.0;
+  a_max = 1.5;
   scale_ = 1.0;
 
   // Computing timing parameters of position trajectory
   if (position_end_ != position_start_) {
-    a_max = v_max / ( 2 * dt_.seconds());
     t_acc_ = v_max / a_max;
     t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
     un_dir_vec = (position_end_ - position_start_) /
@@ -398,9 +470,9 @@ void CartesianSpaceController::interpolate(double t_curr)
     s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * (t_curr - t_acc_ );
     s_dot = v_max * scale_;
   } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
-    s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * t_flat_ - 0.5 * a_max *
-      (t_curr - t_flat_ - t_acc_) *
-      (t_curr - t_flat_ - t_acc_);
+    s = (position_end_ - position_start_).norm() - 0.5 * a_max *
+      (t_flat_ + 2 * t_acc_ - t_curr) *
+      (t_flat_ + 2 * t_acc_ - t_curr);
     s_dot = v_max * scale_ - a_max * (t_curr - t_flat_ - t_acc_ );
   } else {
     s = (position_end_ - position_start_).norm();
@@ -411,7 +483,6 @@ void CartesianSpaceController::interpolate(double t_curr)
 
   position_curr_ = position_start_ + s * un_dir_vec;
   vel_curr_ = s_dot * un_dir_vec;
-
 }
 
 void CartesianSpaceController::updateParams()
@@ -419,6 +490,24 @@ void CartesianSpaceController::updateParams()
   TsidPositionControl::updateParams();
 
   v_max = params_.ee_vmax;
+
+  Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+  Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+
+  for (const auto & ee : ee_names_) {
+
+    auto gain = getParams().cartesian_gain.ee_names_map.at(ee);
+
+    kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
+      gain.kp_yaw;
+
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch,
+      gain.kd_yaw;
+
+    task_ee_[ee_id_[ee]]->Kp(kp_gain);
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
+
+  }
 
 }
 

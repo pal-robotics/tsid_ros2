@@ -20,7 +20,7 @@
   <depend>rclcpp_lifecycle</depend>
   <depend>generate_parameter_library</depend>
   <depend>pinocchio</depend>
-  <depend>tsid_vendor</depend>
+  <depend>tsid</depend>
   <depend>eiquadprog</depend>
 
   <depend>tsid_controller_msgs</depend>

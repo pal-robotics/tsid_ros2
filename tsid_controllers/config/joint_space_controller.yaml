@@ -31,26 +31,26 @@ joint_space_controller:
     joint_pos_gain:
     #Real robot values
       arm_right_1_joint:
-        kp: 2000.0
-        kd: 400.0
+        kp: 250.0
+        kd: 1100.0
       arm_right_2_joint:
-        kp: 2000.0
-        kd: 400.0
+        kp: 250.0
+        kd: 1100.0
       arm_right_3_joint:
-        kp: 2000.0
-        kd: 400.0
+        kp: 250.0
+        kd: 1100.0
       arm_right_4_joint:
-        kp: 2000.0
-        kd: 400.0
+        kp: 250.0
+        kd: 1100.0
       arm_right_5_joint:
-        kp: 2000.0
-        kd: 400.0
+        kp: 250.0
+        kd: 1100.0
       arm_right_6_joint:
-        kp: 2000.0
-        kd: 400.0
+        kp: 250.0
+        kd: 1100.0
       arm_right_7_joint:
-        kp: 50.0
-        kd: 0.2
+        kp: 250.0
+        kd: 1100.0
     #Simulation
       #arm_right_1_joint:
       #  kp: 100.0

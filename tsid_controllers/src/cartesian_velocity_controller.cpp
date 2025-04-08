@@ -59,14 +59,17 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
   }
 
 
+  std::string controller_name = get_node()->get_name();
+
   //  creating publisher for current pose ee
   publisher_curr_pos_ = get_node()->create_publisher<geometry_msgs::msg::Pose>(
-    "current_position", 10);
+    controller_name + "/current_position", 10);
+
 
   // Pose reference callback
   ee_cmd_sub_ =
     get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
-    "cartesian_velocity_controller/vel_cmd", 1,
+    controller_name + "/vel_cmd", 1,
     std::bind(&CartesianVelocityController::setVelCallback, this, _1));
 
   // Initializing tasks
@@ -177,13 +180,27 @@ CartesianVelocityController::update(
 {
 
   // Updating params if new ones are available
-  TsidVelocityControl::updateParams();
+  updateParams();
 
   // Taking current state
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
 
   compute_problem_and_set_command(state.first, state.second);
+
+
+  if (joint_limit_reached_) {
+    for (auto ee : ee_names_) {
+
+      Eigen::VectorXd vel_des = Eigen::VectorXd::Zero(6);
+      vel_des << 0, 0, 0, 0, 0, 0;
+
+      tsid::trajectories::TrajectorySample sample_vel_ee =
+        traj_ee_[ee_id_[ee]].computeNext();
+      sample_vel_ee.setValue(vel_des);
+      task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+    }
+  }
 
   auto h_ee_ = TsidVelocityControl::robot_wrapper_->framePosition(
     TsidVelocityControl::formulation_->data(),
@@ -216,12 +233,10 @@ void CartesianVelocityController::setVelCallback(
       "The vel command should have 6 elements");
     return;
   }
-  std::cout << "setVelCallback" << std::endl;
   auto ee = params_.ee_names[0];
   Eigen::VectorXd vel_des = Eigen::VectorXd::Zero(6);
   vel_des << msg->data[0], msg->data[1], msg->data[2], msg->data[3],
     msg->data[4], msg->data[5];
-  std::cout << "setVelCallback" << std::endl;
 
   tsid::trajectories::TrajectorySample sample_vel_ee =
     traj_ee_[ee_id_[ee]].computeNext();
@@ -232,8 +247,33 @@ void CartesianVelocityController::setVelCallback(
     get_node()->get_logger(), "Desired velocity: %f %f %f %f %f %f",
     vel_des[0], vel_des[1], vel_des[2], vel_des[3], vel_des[4],
     vel_des[5]);
-  std::cout << "setVelCallback" << std::endl;
 }
+
+void CartesianVelocityController::updateParams()
+{
+  TsidVelocityControl::updateParams();
+
+
+  for (auto ee : ee_names_) {
+    auto gain = getParams().cartesian_vel_gain.ee_names_map.at(ee);
+
+    Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+    Eigen::VectorXd ki_gain = Eigen::VectorXd::Zero(6);
+    kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch,
+      gain.kp_yaw;
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch,
+      gain.kd_yaw;
+    ki_gain << gain.ki_x, gain.ki_y, gain.ki_z, gain.ki_roll, gain.ki_pitch,
+      gain.ki_yaw;
+    task_ee_[ee_id_[ee]]->Kp(kp_gain);
+    task_ee_[ee_id_[ee]]->Kd(kd_gain);
+    task_ee_[ee_id_[ee]]->Ki(ki_gain);
+
+  }
+
+}
+
 
 } // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"

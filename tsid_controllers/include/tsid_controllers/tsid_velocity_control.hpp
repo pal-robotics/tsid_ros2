@@ -37,7 +37,7 @@
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
-#include <tsid_controllers_params.hpp>
+#include "tsid_controllers/tsid_controllers_params.hpp"
 
 namespace tsid_controllers
 {
@@ -58,7 +58,7 @@ public:
   state_interface_configuration() const override;
 
   controller_interface::return_type
-  update(const rclcpp::Time & time, const rclcpp::Duration & period) override
+  update(const rclcpp::Time &, const rclcpp::Duration &) override
   {
     return controller_interface::return_type::OK;
   }
@@ -93,6 +93,7 @@ protected:
   std::map<std::string, int> jnt_id_;
   std::map<std::string, int> jnt_command_id_;
   rclcpp::Duration dt_;
+  bool joint_limit_reached_;
 
 private:
   tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
@@ -103,6 +104,7 @@ private:
   bool first_tsid_iter_;
   Eigen::VectorXd q_min_, q_max_;
   Eigen::VectorXd q_prev_;
+  Eigen::VectorXd v_max_;
 };
 } // namespace tsid_controllers
 
