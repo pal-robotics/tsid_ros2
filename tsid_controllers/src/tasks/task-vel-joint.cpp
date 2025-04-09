@@ -63,9 +63,10 @@ void TaskJointVel::setMask(ConstRefVector m)
   m_activeAxes.resize(dim);
   unsigned int j = 0;
   for (unsigned int i = 0; i < m.size(); i++) {
-    if (m(i) != 0.0) {
+    if (std::abs(m(i)) > std::numeric_limits<double>::epsilon()) {
       PINOCCHIO_CHECK_INPUT_ARGUMENT(
-        m(i) == 1.0, "Valid mask values are either 0.0 or 1.0 received: " +
+        std::abs(m(i) - 1.0) < std::numeric_limits<double>::epsilon(),
+        "Valid mask values are either 0.0 or 1.0 received: " +
         std::to_string(m(i)));
       S(j, m_robot.nv() - m_robot.na() + i) = 1.0;
       m_activeAxes(j) = i;
@@ -165,7 +166,7 @@ const ConstraintBase & TaskJointVel::getConstraint() const
 }
 
 const ConstraintBase & TaskJointVel::compute(
-  const double, ConstRefVector q,
+  const double, ConstRefVector,
   ConstRefVector v, Data &)
 {
   m_ref_q_augmented.tail(m_robot.nq_actuated()) = m_ref.getValue();
@@ -175,8 +176,9 @@ const ConstraintBase & TaskJointVel::compute(
   m_v_error = m_ref.getValue() - m_v;
   m_p_error += m_v_error * dt_;
   m_a_error = (m_v_error - v_err_prev ) / dt_;    // acc err in local world-oriented frame
-  m_a_des = m_Kp.cwiseProduct(m_v_error) + m_Ki.cwiseProduct(m_p_error) +
+  m_a_des = m_Kp.cwiseProduct(m_v_error) + //m_Ki.cwiseProduct(m_p_error) +
     m_Kd.cwiseProduct(m_a_error);
+
 
   for (unsigned int i = 0; i < m_activeAxes.size(); i++) {
     m_constraint.vector()(i) = m_a_des(m_activeAxes(i));

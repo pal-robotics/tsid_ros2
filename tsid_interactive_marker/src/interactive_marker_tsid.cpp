@@ -1,3 +1,17 @@
+// Copyright (c) 2024 PAL Robotics S.L. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -18,10 +32,8 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 #include "sensor_msgs/msg/joint_state.hpp"
-#include "visualization_msgs/msg/marker.hpp"
 #include "tsid_controller_msgs/msg/ee_pos.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-
 
 using std::placeholders::_1;
 
@@ -96,7 +108,6 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   rclcpp::TimerBase::SharedPtr frame_timer_;
   rclcpp::TimerBase::SharedPtr timer_cmd_;
-
 };  // class InteractiveMarkerTsidNode
 
 InteractiveMarkerTsidNode::InteractiveMarkerTsidNode(const rclcpp::NodeOptions & options)
@@ -199,7 +210,6 @@ InteractiveMarkerTsidNode::processFeedbackLeft(
   const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback)
 {
   if (feedback->event_type == visualization_msgs::msg::InteractiveMarkerFeedback::POSE_UPDATE) {
-
     if (find(
         ee_to_update_.begin(), ee_to_update_.end(),
         "arm_left_7_link") == ee_to_update_.end())
@@ -207,7 +217,7 @@ InteractiveMarkerTsidNode::processFeedbackLeft(
       ee_to_update_.push_back("arm_left_7_link");
       desired_pose_.push_back(feedback->pose);
     } else {
-      for (int i = 0; i < ee_to_update_.size(); i++) {
+      for (size_t i = 0; i < ee_to_update_.size(); i++) {
         if (ee_to_update_[i] == "arm_left_7_link") {
           desired_pose_[i] = feedback->pose;
         }
@@ -224,7 +234,6 @@ InteractiveMarkerTsidNode::processFeedbackRight(
   const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback)
 {
   if (feedback->event_type == visualization_msgs::msg::InteractiveMarkerFeedback::POSE_UPDATE) {
-
     if (find(
         ee_to_update_.begin(), ee_to_update_.end(),
         "arm_right_7_link") == ee_to_update_.end())
@@ -232,7 +241,7 @@ InteractiveMarkerTsidNode::processFeedbackRight(
       ee_to_update_.push_back("arm_right_7_link");
       desired_pose_.push_back(feedback->pose);
     } else {
-      for (int i = 0; i < ee_to_update_.size(); i++) {
+      for (size_t i = 0; i < ee_to_update_.size(); i++) {
         if (ee_to_update_[i] == "arm_right_7_link") {
           desired_pose_[i] = feedback->pose;
         }
@@ -249,7 +258,6 @@ InteractiveMarkerTsidNode::processFeedbackHead(
   const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr & feedback)
 {
   if (feedback->event_type == visualization_msgs::msg::InteractiveMarkerFeedback::POSE_UPDATE) {
-
     if (find(
         ee_to_update_.begin(), ee_to_update_.end(),
         "arm_head_7_link") == ee_to_update_.end())
@@ -257,13 +265,12 @@ InteractiveMarkerTsidNode::processFeedbackHead(
       ee_to_update_.push_back("arm_head_7_link");
       desired_pose_.push_back(feedback->pose);
     } else {
-      for (int i = 0; i < ee_to_update_.size(); i++) {
+      for (size_t i = 0; i < ee_to_update_.size(); i++) {
         if (ee_to_update_[i] == "arm_head_7_link") {
           desired_pose_[i] = feedback->pose;
         }
       }
     }
-
   }
 
   server_->applyChanges();
@@ -296,8 +303,8 @@ InteractiveMarkerTsidNode::alignMarker(
 
 void
 InteractiveMarkerTsidNode::make6DofMarker(
-  bool fixed, std::string frame_name, unsigned int interaction_mode,
-  const tf2::Vector3 & position,
+  bool, std::string frame_name, unsigned int interaction_mode,
+  const tf2::Vector3 &,
   bool show_6dof)
 {
   while (!first_pos) {
@@ -363,8 +370,6 @@ InteractiveMarkerTsidNode::make6DofMarker(
     control.name = "move_y";
     control.interaction_mode = visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
     int_marker.controls.push_back(control);
-
-
   }
 
   server_->insert(int_marker);
@@ -394,16 +399,15 @@ void InteractiveMarkerTsidNode::publish_cmd_()
   message.ee_name.resize(ee_to_update_.size());
   message.desired_pose.resize(ee_to_update_.size());
 
-  for (int i = 0; i < ee_to_update_.size(); i++) {
+  for (size_t i = 0; i < ee_to_update_.size(); i++) {
     message.ee_name[i] = ee_to_update_[i];
     message.desired_pose[i] = desired_pose_[i];
     message.desired_pose[i].position.z = desired_pose_[i].position.z;
   }
 
   publisher_->publish(message);
-
 }
-}
+}  // namespace tsid_interactive_markers
 
 int main(int argc, char ** argv)
 {

@@ -1,0 +1,22 @@
+joint_space_controller:
+  ros__parameters:
+    type: tsid_controllers/JointSpaceTsidController
+    update_rate: 1000
+    
+    joint_state_names:
+      - torso_lift_joint
+
+    joint_command_names:
+      - torso_lift_joint
+
+    ee_names:
+      - arm_right_7_link
+
+    interface_name: position
+
+    velocity_scaling: 1.0
+    joint_pos_gain:
+      torso_lift_joint:
+        kp: 200.0
+        kd: 500.0
+    

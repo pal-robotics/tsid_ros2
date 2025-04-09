@@ -1,4 +1,8 @@
 <library path="tsid_controllers">
+  <class name="tsid_controllers/TsidPositionControl" type="tsid_controllers::TsidPositionControl" base_class_type="controller_interface::ControllerInterface">
+    <description> TsidPositionControl </description>
+  </class> 
+  
   <class name="tsid_controllers/CartesianSpaceController" type="tsid_controllers::CartesianSpaceController" base_class_type="controller_interface::ControllerInterface">
     <description>A Cartesian space controller for TSID.</description>
   </class>
@@ -7,11 +11,15 @@
     <description> Joint space controller for the whole body of a robot using TSID </description>
   </class> 
 
-  <class name="tsid_controllers/JointSpaceVelTsidController" type="tsid_controllers::JointSpaceVelTsidController" base_class_type="controller_interface::ControllerInterface">
-    <description> Joint space controller for the whole body of a robot using TSID </description>
-  </class> 
-
   <class name="tsid_controllers/CartesianVelocityController" type="tsid_controllers::CartesianVelocityController" base_class_type="controller_interface::ControllerInterface">
     <description> Joint space controller for the whole body of a robot using TSID </description>
   </class> 
+
+  <class name="tsid_controllers/SinJointSpaceController" type="tsid_controllers::SinJointSpaceController" base_class_type="controller_interface::ControllerInterface">
+    <description> Joint space sin </description>
+  </class> 
+  
+  <class name="tsid_controllers/JointSpaceVelTsidController" type="tsid_controllers::JointSpaceVelTsidController" base_class_type="controller_interface::ControllerInterface">
+    <description> Joint space velocity control </description>
+  </class>
 </library>

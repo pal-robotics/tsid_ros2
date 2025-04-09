@@ -27,7 +27,7 @@ cartesian_vel_controller:
 
     velocity_scaling: 1.0
 
-    posture_gain: 0.0
+    posture_gain: 1.0
 
     cartesian_vel_gain:
          arm_right_7_link:
@@ -37,18 +37,18 @@ cartesian_vel_controller:
           kp_roll: 250.0
           kp_pitch: 250.0
           kp_yaw: 250.0
-          ki_x: 0.5
-          ki_y: 0.5
-          ki_z: 0.5
-          ki_roll: 0.5
-          ki_pitch: 0.5
-          ki_yaw: 0.5
-          kd_x: 1.0
-          kd_y: 1.0
-          kd_z: 1.0
-          kd_roll: 1.0
-          kd_pitch: 1.0
-          kd_yaw: 1.0
+          ki_x: 5.0
+          ki_y: 5.0
+          ki_z: 5.0
+          ki_roll: 5.0
+          ki_pitch: 5.0
+          ki_yaw: 5.0
+          kd_x: 0.05
+          kd_y: 0.05
+          kd_z: 0.05
+          kd_roll: 0.05
+          kd_pitch: 0.05
+          kd_yaw: 0.05
 
 
 
