@@ -38,6 +38,8 @@
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include "tsid_controllers/tsid_controllers_params.hpp"
+#include <tsid/tasks/task-joint-posture.hpp>
+
 
 namespace tsid_controllers
 {
@@ -85,6 +87,7 @@ protected:
   std::vector<std::vector<std::string>> state_interface_names_;
   std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
   tsid::robots::RobotWrapper * robot_wrapper_;
+  tsid::tasks::TaskJointPosture * task_joint_posture_;
   tsid::InverseDynamicsFormulationAccForce * formulation_;
   std::vector<std::string> joint_names_;
   pinocchio::Model model_;
@@ -100,6 +103,7 @@ private:
   tsid::solvers::SolverHQuadProgFast * solver_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos_;
+  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;  
   Eigen::VectorXd q_int_;
   bool first_tsid_iter_;
   Eigen::VectorXd q_min_, q_max_;
