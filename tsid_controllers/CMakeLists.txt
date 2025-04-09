@@ -9,6 +9,7 @@ find_package(ament_cmake_auto REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
+set(_Boost_PYTHON310_HEADERS "boost/python.hpp")
 ament_auto_find_build_dependencies()
 find_package(pinocchio REQUIRED)
 find_package(tsid REQUIRED)
