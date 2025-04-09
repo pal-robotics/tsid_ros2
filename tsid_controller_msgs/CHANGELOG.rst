@@ -2,8 +2,8 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.1 (2025-04-09)
+------------------
 * Merge branch 're-factoring' into 'master'
   Re factoring
   See merge request control/tsid_framework!17
