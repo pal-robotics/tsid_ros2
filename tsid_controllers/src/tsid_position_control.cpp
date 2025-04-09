@@ -402,10 +402,8 @@ void TsidPositionControl::DefaultPositionTasks()
     *robot_wrapper_, dt_.seconds(), false);
   task_joint_bounds_->setTimeStep(dt_.seconds());
 
-  Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6) + 0.07 *
-    Eigen::VectorXd::Ones(model_.nv - 6);
-  Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6) - 0.07 *
-    Eigen::VectorXd::Ones(model_.nv - 6);
+  Eigen::VectorXd q_min = model_.lowerPositionLimit.tail(model_.nv - 6);
+  Eigen::VectorXd q_max = model_.upperPositionLimit.tail(model_.nv - 6);
 
   task_joint_bounds_->setPositionBounds(q_min, q_max);
 

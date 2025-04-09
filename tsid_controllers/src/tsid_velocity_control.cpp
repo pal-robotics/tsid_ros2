@@ -380,10 +380,8 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds", *robot_wrapper_, dt_.seconds(), false);
-  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6) + 0.07 *
-    Eigen::VectorXd::Ones(model_.nv - 6);
-  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6) - 0.07 *
-    Eigen::VectorXd::Ones(model_.nv - 6);
+  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6);
+  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6);
 
   for (Eigen::Index i = 0; i < q_max_.size(); i++) {
     std::cout << "q_max" << q_max_[i] << std::endl;
