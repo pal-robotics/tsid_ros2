@@ -79,6 +79,7 @@ private:
 
   std::vector<std::string> ee_names_;
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
+  Eigen::VectorXd vel_des_;
 
 };
 } // namespace tsid_controllers

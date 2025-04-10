@@ -39,12 +39,18 @@
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include "tsid_controllers/tsid_controllers_params.hpp"
 #include <tsid/tasks/task-joint-posture.hpp>
-
+#include <visualization_msgs/msg/marker.hpp>
+#include <unordered_map>
 
 namespace tsid_controllers
 {
 BETTER_ENUM(Interfaces, int, position = 0, velocity = 1, effort = 2);
-
+struct BoundingBox
+{
+  double x_min, x_max;
+  double y_min, y_max;
+  double z_min, z_max;
+};
 class TsidVelocityControl : public controller_interface::ControllerInterface
 {
 public:
@@ -76,6 +82,11 @@ public:
   std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
 
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
+  bool isPoseInsideBoundingBox(const geometry_msgs::msg::Pose & pose, const std::string & effector_name);
+  void visualizePose(const geometry_msgs::msg::Pose & pose);
+  void visualizeBoundingBox(const std::string & effector_name);
+  const Eigen::Vector3d & getCorrectionDirection(const std::string & effector_name) const;
+  std::unordered_map<std::string, Eigen::Vector3d> correction_directions_;
 
 protected:
   template<typename T>
@@ -97,12 +108,15 @@ protected:
   std::map<std::string, int> jnt_command_id_;
   rclcpp::Duration dt_;
   bool joint_limit_reached_;
+  std::unordered_map<std::string, BoundingBox> bounding_boxes_;
 
 private:
   tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
   tsid::solvers::SolverHQuadProgFast * solver_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr box_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_pub_;  
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   Eigen::VectorXd q_int_;
   bool first_tsid_iter_;
