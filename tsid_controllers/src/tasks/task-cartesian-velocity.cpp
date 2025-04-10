@@ -172,6 +172,13 @@ const ConstraintBase & TaskCartesianVelocity::compute(
   m_robot.frameVelocity(data, m_frame_id, v_frame);
   m_robot.frameClassicAcceleration(data, m_frame_id, m_drift);
 
+  if (first) {
+    m_p_error.setZero();
+    m_v_error.setZero();
+    m_a_error.setZero();
+    m_drift.setZero();
+  }
+
   // @todo Since Jacobian computation is cheaper in world frame
   // we could do all computations in world frame
   m_robot.frameJacobianLocal(data, m_frame_id, m_J);
