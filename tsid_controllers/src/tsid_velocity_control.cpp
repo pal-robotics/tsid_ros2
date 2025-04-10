@@ -267,7 +267,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_activate(
   // Setting posture task reference as initial position
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
- 
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -312,7 +312,7 @@ void TsidVelocityControl::updateParams()
     v_max_ =
       v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
     task_joint_bounds_->setVelocityBounds(v_max_);
-    
+
     Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
     Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
 
@@ -341,7 +341,7 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Posture Task
   task_joint_posture_ =
     new tsid::tasks::TaskJointPosture("task-joint-posture", *robot_wrapper_);
-  
+
   Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
   Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
 
@@ -364,7 +364,7 @@ void TsidVelocityControl::DefaultVelocityTasks()
 
   int posture_priority = 1; // 0 constraint, 1 cost function
   double transition_time = 0.0;
-  double posture_weight = 1e-3;
+  double posture_weight = 1e-4;
 
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
@@ -448,7 +448,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
       double v_curr =
         v.tail(model_.nv - 6)[model_.getJointId(joint) - 2];
       threshold =
-        -(v_curr * v_curr) / (2 * (-20)) + 0.02;
+        -(v_curr * v_curr) / (2 * (-20)) + 0.05;
     }
 
     if (std::abs(

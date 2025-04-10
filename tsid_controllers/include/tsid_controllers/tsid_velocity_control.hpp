@@ -103,7 +103,7 @@ private:
   tsid::solvers::SolverHQuadProgFast * solver_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos_;
-  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;  
+  tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   Eigen::VectorXd q_int_;
   bool first_tsid_iter_;
   Eigen::VectorXd q_min_, q_max_;

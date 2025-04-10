@@ -107,45 +107,6 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
       transition_time);
   }
 
-  // Joint Posture Task
-
-  task_joint_posture_ = new tsid::tasks::TaskJointPosture(
-    "task-joint-posture",
-    *robot_wrapper_);
-
-  //Taking gain for joint posture task
-  Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
-  Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
-
-  for (auto joint : joint_command_names_) {
-    auto gain = params_.joint_pos_gain.joint_command_names_map.at(joint);
-
-    if (gain.kp < 0 || gain.kd < 0) {
-      RCLCPP_ERROR(
-        get_node()->get_logger(),
-        "The gains for joint position task must be positive");
-      return controller_interface::CallbackReturn::ERROR;
-    }
-
-    kp[jnt_command_id_[joint]] = gain.kp;
-    kd[jnt_command_id_[joint]] = gain.kd;
-  }
-
-  task_joint_posture_->Kp(kp);
-  task_joint_posture_->Kd(kd);
-  int posture_priority = 1;  // 0 constraint, 1 cost function
-  double posture_weight = 1e-2;
-
-  Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
-
-  traj_joint_posture_ = new tsid::trajectories::TrajectoryEuclidianConstant(
-    "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
-  tsid::trajectories::TrajectorySample sample_posture = traj_joint_posture_->computeNext();
-  task_joint_posture_->setReference(sample_posture);
-  formulation_->addMotionTask(
-    *task_joint_posture_, posture_weight, posture_priority,
-    transition_time);
-
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -169,6 +130,8 @@ controller_interface::CallbackReturn CartesianVelocityController::on_activate(
       traj_ee_[ee_id_[ee]].computeNext();
     task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
   }
+
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
