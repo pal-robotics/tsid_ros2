@@ -212,7 +212,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
 
   publisher_curr_pos_ =
     get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_pos", 10);
-  
+
   box_pub_ = get_node()->create_publisher<visualization_msgs::msg::Marker>("bounding_box", 10);
   pose_pub_ = get_node()->create_publisher<visualization_msgs::msg::Marker>("desired_pose", 10);
 
@@ -400,7 +400,7 @@ void TsidVelocityControl::DefaultVelocityTasks()
 
   int posture_priority = 1; // 0 constraint, 1 cost function
   double transition_time = 0.0;
-  double posture_weight = 1e-4;
+  double posture_weight = 1e-3;
 
   Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
 
@@ -416,8 +416,10 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds", *robot_wrapper_, dt_.seconds(), false);
-  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6);
-  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6);
+  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6) + 0.05 * Eigen::VectorXd::Ones(
+    model_.nv - 6);
+  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6) - 0.05 * Eigen::VectorXd::Ones(
+    model_.nv - 6);
 
   for (Eigen::Index i = 0; i < q_max_.size(); i++) {
     std::cout << "q_max" << q_max_[i] << std::endl;
@@ -484,7 +486,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
       double v_curr =
         v.tail(model_.nv - 6)[model_.getJointId(joint) - 2];
       threshold =
-        -(v_curr * v_curr) / (2 * (-20)) + 0.05;
+        -(v_curr * v_curr) / (2 * (-20)) + 0.02;
     }
 
     if (std::abs(
@@ -677,12 +679,14 @@ bool TsidVelocityControl::isPoseInsideBoundingBox(
     direction.z() = -1.0;
     inside = false;
   }
-  
+
   correction_directions_[effector_name] = direction;
   return inside;
 }
 
-const Eigen::Vector3d & TsidVelocityControl::getCorrectionDirection(const std::string & effector_name) const {
+const Eigen::Vector3d & TsidVelocityControl::getCorrectionDirection(
+  const std::string & effector_name) const
+{
   auto it = correction_directions_.find(effector_name);
   if (it != correction_directions_.end()) {
     return it->second;
