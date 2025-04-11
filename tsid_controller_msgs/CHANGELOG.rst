@@ -2,8 +2,8 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.3 (2025-04-11)
+------------------
 * 0.0.2
 * Update Changelog
 * Merge branch 'revert-ab2a11b8' into 'vmo/fix_cart_vel'
