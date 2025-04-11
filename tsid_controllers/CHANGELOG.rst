@@ -2,18 +2,6 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
-* fix pipelines
-* Fix cartesian velocity
-* Merge branch 'add/boundingboxvel' into 'vmo/fix_cart_vel'
-  add bouding box check on the velocity
-  See merge request control/tsid_framework!19
-* add bouding box check on the velocity
-* Adding first check to cartesian vel
-* Adding joint posture to cartesian velocity
-* Contributors: ileniaperrella, vivianamorlando
-
 0.0.1 (2025-04-09)
 ------------------
 * Merge branch 're-factoring' into 'master'
