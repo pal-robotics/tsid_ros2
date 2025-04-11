@@ -188,14 +188,16 @@ CartesianVelocityController::update(
     ee_names_[i] = getParams().ee_names[i];
     visualizeBoundingBox(ee_names_[i]);
     visualizePose(current_pose);
-  
+
     if (!isPoseInsideBoundingBox(current_pose, ee_names_[i])) {
       const Eigen::Vector3d & direction = getCorrectionDirection(ee_names_[i]);
 
       Eigen::VectorXd corrected_vel = vel_des_;
 
-      for (int j = 0; j < 3; j++) {  
-        if (direction[j] != 0.0 && (vel_des_[j] * direction[j] <= 0.0)) {
+      for (int j = 0; j < 3; j++) {
+        if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
+          (vel_des_[j] * direction[j] <= std::numeric_limits<double>::epsilon()))
+        {
           corrected_vel[j] = 0.0;
         }
       }
@@ -210,7 +212,7 @@ CartesianVelocityController::update(
         "Pose of %s is outside the bounding box. Velocity components going outward are zeroed.",
         ee_names_[i].c_str());
     }
-   }
+  }
   return controller_interface::return_type::OK;
 }
 
@@ -232,7 +234,7 @@ void CartesianVelocityController::setVelCallback(
   sample_vel_ee.setValue(vel_des_);
   task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
   RCLCPP_INFO_THROTTLE(
-    get_node()->get_logger(), *get_node()->get_clock() ,1000, "Desired velocity: %f %f %f %f %f %f",
+    get_node()->get_logger(), *get_node()->get_clock(), 1000, "Desired velocity: %f %f %f %f %f %f",
     vel_des_[0], vel_des_[1], vel_des_[2], vel_des_[3], vel_des_[4],
     vel_des_[5]);
 }
