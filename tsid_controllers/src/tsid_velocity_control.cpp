@@ -92,7 +92,26 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
       }
     }
   }
+  if (params_.ee_names.empty()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "The end effector name cannot be empty");
+    return controller_interface::CallbackReturn::ERROR;
+  }
 
+  // Load bounding boxes from parameters
+  for (const auto & ee_name : params_.ee_names) {
+    BoundingBox box;
+
+    const auto & cube = params_.manipulation_cube.ee_names_map.at(ee_name);
+
+    box.x_min = cube.x_min;
+    box.x_max = cube.x_max;
+    box.y_min = cube.y_min;
+    box.y_max = cube.y_max;
+    box.z_min = cube.z_min;
+    box.z_max = cube.z_max;
+
+    bounding_boxes_[ee_name] = box;
+  }
 
   // Create the state and command interfaces
   state_interfaces_.reserve(3 * joint_names_.size());
@@ -194,6 +213,9 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
   publisher_curr_pos_ =
     get_node()->create_publisher<std_msgs::msg::Float64MultiArray>("tsid_cmd_pos", 10);
 
+  box_pub_ = get_node()->create_publisher<visualization_msgs::msg::Marker>("bounding_box", 10);
+  pose_pub_ = get_node()->create_publisher<visualization_msgs::msg::Marker>("desired_pose", 10);
+
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -267,7 +289,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_activate(
   // Setting posture task reference as initial position
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
- 
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -312,7 +334,7 @@ void TsidVelocityControl::updateParams()
     v_max_ =
       v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
     task_joint_bounds_->setVelocityBounds(v_max_);
-    
+
     Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
     Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
 
@@ -331,6 +353,20 @@ void TsidVelocityControl::updateParams()
     }
     task_joint_posture_->Kp(kp);
     task_joint_posture_->Kd(kd);
+    for (const auto & ee_name : params_.ee_names) {
+      BoundingBox box;
+
+      const auto & cube = params_.manipulation_cube.ee_names_map.at(ee_name);
+
+      box.x_min = cube.x_min;
+      box.x_max = cube.x_max;
+      box.y_min = cube.y_min;
+      box.y_max = cube.y_max;
+      box.z_min = cube.z_min;
+      box.z_max = cube.z_max;
+
+      bounding_boxes_[ee_name] = box;
+    }
 
   }
 }
@@ -341,7 +377,7 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Posture Task
   task_joint_posture_ =
     new tsid::tasks::TaskJointPosture("task-joint-posture", *robot_wrapper_);
-  
+
   Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
   Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
 
@@ -380,8 +416,10 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds", *robot_wrapper_, dt_.seconds(), false);
-  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6);
-  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6);
+  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6) + 0.05 * Eigen::VectorXd::Ones(
+    model_.nv - 6);
+  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6) - 0.05 * Eigen::VectorXd::Ones(
+    model_.nv - 6);
 
   for (Eigen::Index i = 0; i < q_max_.size(); i++) {
     std::cout << "q_max" << q_max_[i] << std::endl;
@@ -532,7 +570,130 @@ void TsidVelocityControl::compute_problem_and_set_command(
   publisher_curr_pos_->publish(pub_pos);
 
 }
+void TsidVelocityControl::visualizeBoundingBox(const std::string & effector_name)
+{
+  // check if the effector_name is a valid end-effector
+  if (bounding_boxes_.find(effector_name) == bounding_boxes_.end()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Unknown end-effector: %s", effector_name.c_str());
+    return;
+  }
 
+  for (const auto & bb : bounding_boxes_) {
+    if (effector_name == bb.first) {  // Match the effector name with the bounding box key
+      visualization_msgs::msg::Marker bounding_box_marker;
+      bounding_box_marker.header.frame_id = "base_footprint";
+      bounding_box_marker.ns = "bounding_box";
+      bounding_box_marker.header.stamp = rclcpp::Clock().now();
+
+      bounding_box_marker.id = std::hash<std::string>{}(bb.first);
+
+      bounding_box_marker.type = visualization_msgs::msg::Marker::CUBE;
+      bounding_box_marker.action = visualization_msgs::msg::Marker::ADD;
+
+      bounding_box_marker.scale.x = bb.second.x_max - bb.second.x_min;  // x range
+      bounding_box_marker.scale.y = bb.second.y_max - bb.second.y_min;  // y range
+      bounding_box_marker.scale.z = bb.second.z_max - bb.second.z_min;  // z range
+
+      bounding_box_marker.pose.position.x = (bb.second.x_max + bb.second.x_min) / 2.0;
+      bounding_box_marker.pose.position.y = (bb.second.y_max + bb.second.y_min) / 2.0;
+      bounding_box_marker.pose.position.z = (bb.second.z_max + bb.second.z_min) / 2.0;
+
+      bounding_box_marker.pose.orientation.w = 1.0;
+
+      bounding_box_marker.color.r = 0.0f;
+      bounding_box_marker.color.g = 1.0f;
+      bounding_box_marker.color.b = 0.0f;
+      bounding_box_marker.color.a = 0.1f;
+
+      box_pub_->publish(bounding_box_marker);
+    }
+  }
+}
+
+void TsidVelocityControl::visualizePose(
+  const geometry_msgs::msg::Pose & pose)
+{
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = "base_footprint";
+  marker.header.stamp = rclcpp::Clock().now();
+  marker.ns = "desired_pose";
+  marker.id = 1;
+  marker.type = visualization_msgs::msg::Marker::SPHERE;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+
+  marker.pose.position.x = pose.position.x;
+  marker.pose.position.y = pose.position.y;
+  marker.pose.position.z = pose.position.z;
+
+  marker.scale.x = 0.1;
+  marker.scale.y = 0.1;
+  marker.scale.z = 0.1;
+
+  marker.color.a = 1.0;
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+  marker.color.b = 0.0;
+
+  pose_pub_->publish(marker);
+}
+
+bool TsidVelocityControl::isPoseInsideBoundingBox(
+  const geometry_msgs::msg::Pose & pose,
+  const std::string & effector_name)
+{
+  auto it = bounding_boxes_.find(effector_name);
+  if (it == bounding_boxes_.end()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Unknown end-effector: %s", effector_name.c_str());
+    correction_directions_[effector_name] = Eigen::Vector3d::Zero();
+    return false;
+  }
+
+  const BoundingBox & box = it->second;
+  const double x = pose.position.x;
+  const double y = pose.position.y;
+  const double z = pose.position.z;
+
+  Eigen::Vector3d direction(0.0, 0.0, 0.0);
+  bool inside = true;
+
+  if (x < box.x_min) {
+    direction.x() = 1.0;
+    inside = false;
+  } else if (x > box.x_max) {
+    direction.x() = -1.0;
+    inside = false;
+  }
+
+  if (y < box.y_min) {
+    direction.y() = 1.0;
+    inside = false;
+  } else if (y > box.y_max) {
+    direction.y() = -1.0;
+    inside = false;
+  }
+
+  if (z < box.z_min) {
+    direction.z() = 1.0;
+    inside = false;
+  } else if (z > box.z_max) {
+    direction.z() = -1.0;
+    inside = false;
+  }
+
+  correction_directions_[effector_name] = direction;
+  return inside;
+}
+
+const Eigen::Vector3d & TsidVelocityControl::getCorrectionDirection(
+  const std::string & effector_name) const
+{
+  auto it = correction_directions_.find(effector_name);
+  if (it != correction_directions_.end()) {
+    return it->second;
+  }
+  static const Eigen::Vector3d zero = Eigen::Vector3d::Zero();
+  return zero;
+}
 } // namespace tsid_controllers
 #include "pluginlib/class_list_macros.hpp"
 

@@ -107,45 +107,6 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
       transition_time);
   }
 
-  // Joint Posture Task
-
-  task_joint_posture_ = new tsid::tasks::TaskJointPosture(
-    "task-joint-posture",
-    *robot_wrapper_);
-
-  //Taking gain for joint posture task
-  Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
-  Eigen::VectorXd kd = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);
-
-  for (auto joint : joint_command_names_) {
-    auto gain = params_.joint_pos_gain.joint_command_names_map.at(joint);
-
-    if (gain.kp < 0 || gain.kd < 0) {
-      RCLCPP_ERROR(
-        get_node()->get_logger(),
-        "The gains for joint position task must be positive");
-      return controller_interface::CallbackReturn::ERROR;
-    }
-
-    kp[jnt_command_id_[joint]] = gain.kp;
-    kd[jnt_command_id_[joint]] = gain.kd;
-  }
-
-  task_joint_posture_->Kp(kp);
-  task_joint_posture_->Kd(kd);
-  int posture_priority = 1;  // 0 constraint, 1 cost function
-  double posture_weight = 1e-2;
-
-  Eigen::VectorXd q0 = Eigen::VectorXd::Zero(robot_wrapper_->nv());
-
-  traj_joint_posture_ = new tsid::trajectories::TrajectoryEuclidianConstant(
-    "traj_joint", q0.tail(robot_wrapper_->nv() - 6));
-  tsid::trajectories::TrajectorySample sample_posture = traj_joint_posture_->computeNext();
-  task_joint_posture_->setReference(sample_posture);
-  formulation_->addMotionTask(
-    *task_joint_posture_, posture_weight, posture_priority,
-    transition_time);
-
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -169,6 +130,9 @@ controller_interface::CallbackReturn CartesianVelocityController::on_activate(
       traj_ee_[ee_id_[ee]].computeNext();
     task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
   }
+
+  vel_des_ = Eigen::VectorXd::Zero(6);
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -220,7 +184,35 @@ CartesianVelocityController::update(
   current_pose.orientation.w = m_p[6];
 
   publisher_curr_pos_->publish(current_pose);
+  for (size_t i = 0; i < getParams().ee_names.size(); i++) {
+    ee_names_[i] = getParams().ee_names[i];
+    visualizeBoundingBox(ee_names_[i]);
+    visualizePose(current_pose);
 
+    if (!isPoseInsideBoundingBox(current_pose, ee_names_[i])) {
+      const Eigen::Vector3d & direction = getCorrectionDirection(ee_names_[i]);
+
+      Eigen::VectorXd corrected_vel = vel_des_;
+
+      for (int j = 0; j < 3; j++) {
+        if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
+          (vel_des_[j] * direction[j] <= std::numeric_limits<double>::epsilon()))
+        {
+          corrected_vel[j] = 0.0;
+        }
+      }
+
+      tsid::trajectories::TrajectorySample sample_vel_ee =
+        traj_ee_[ee_id_[ee_names_[i]]].computeNext();
+      sample_vel_ee.setValue(corrected_vel);
+      task_ee_[ee_id_[ee_names_[i]]]->setReference(sample_vel_ee);
+
+      RCLCPP_WARN_THROTTLE(
+        get_node()->get_logger(), *get_node()->get_clock(), 5000,
+        "Pose of %s is outside the bounding box. Velocity components going outward are zeroed.",
+        ee_names_[i].c_str());
+    }
+  }
   return controller_interface::return_type::OK;
 }
 
@@ -234,19 +226,17 @@ void CartesianVelocityController::setVelCallback(
     return;
   }
   auto ee = params_.ee_names[0];
-  Eigen::VectorXd vel_des = Eigen::VectorXd::Zero(6);
-  vel_des << msg->data[0], msg->data[1], msg->data[2], msg->data[3],
+  vel_des_ << msg->data[0], msg->data[1], msg->data[2], msg->data[3],
     msg->data[4], msg->data[5];
 
   tsid::trajectories::TrajectorySample sample_vel_ee =
     traj_ee_[ee_id_[ee]].computeNext();
-  sample_vel_ee.setValue(vel_des);
+  sample_vel_ee.setValue(vel_des_);
   task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
-  std::cout << "setVelCallback" << std::endl;
-  RCLCPP_INFO(
-    get_node()->get_logger(), "Desired velocity: %f %f %f %f %f %f",
-    vel_des[0], vel_des[1], vel_des[2], vel_des[3], vel_des[4],
-    vel_des[5]);
+  RCLCPP_INFO_THROTTLE(
+    get_node()->get_logger(), *get_node()->get_clock(), 1000, "Desired velocity: %f %f %f %f %f %f",
+    vel_des_[0], vel_des_[1], vel_des_[2], vel_des_[3], vel_des_[4],
+    vel_des_[5]);
 }
 
 void CartesianVelocityController::updateParams()

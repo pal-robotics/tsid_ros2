@@ -172,6 +172,14 @@ const ConstraintBase & TaskCartesianVelocity::compute(
   m_robot.frameVelocity(data, m_frame_id, v_frame);
   m_robot.frameClassicAcceleration(data, m_frame_id, m_drift);
 
+  if (first) {
+    m_p_error.setZero();
+    m_v_error.setZero();
+    m_a_error.setZero();
+    m_drift.setZero();
+    v_err_prev.setZero();
+  }
+
   // @todo Since Jacobian computation is cheaper in world frame
   // we could do all computations in world frame
   m_robot.frameJacobianLocal(data, m_frame_id, m_J);
@@ -192,8 +200,8 @@ const ConstraintBase & TaskCartesianVelocity::compute(
   // desired acc in local world-oriented frame
   m_drift = m_wMl.act(m_drift);
 
-  m_a_des = m_Kp.cwiseProduct(m_v_error.toVector()) + m_Ki.cwiseProduct(m_p_error.toVector()) +
-    m_Kd.cwiseProduct(m_a_error.toVector()) +
+  m_a_des = m_Kp.cwiseProduct(m_v_error.toVector()) +
+    m_Kd.cwiseProduct(m_a_error.toVector()) + m_Ki.cwiseProduct(m_p_error.toVector()) +
     m_v_ref.toVector() + m_robot.model().gravity.toVector();
 
   // Use an explicit temporary `m_J_rotated` here to avoid allocations.
