@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2025-04-11)
+------------------
 * fix pipelines
 * Fix cartesian velocity
 * Merge branch 'add/boundingboxvel' into 'vmo/fix_cart_vel'
