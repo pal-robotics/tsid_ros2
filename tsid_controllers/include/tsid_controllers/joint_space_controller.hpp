@@ -23,6 +23,7 @@
 #include "tsid_controllers/tsid_position_control.hpp"
 #include <controller_interface/controller_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 
 namespace tsid_controllers
 {
@@ -56,6 +57,7 @@ private:
   Eigen::VectorXd position_start_;
   Eigen::VectorXd position_curr_;
   Eigen::VectorXd vel_curr_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_current_cmd;
 
 };
 } // namespace tsid_controllers
