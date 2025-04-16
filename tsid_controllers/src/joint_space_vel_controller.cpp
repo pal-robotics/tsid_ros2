@@ -140,6 +140,8 @@ void JointSpaceVelTsidController::setVelocityCb(
     ref[i] = msg->data[i];
   }
 
+  velocity_cmd_ = ref;
+
   tsid::trajectories::TrajectorySample sample_velocity_joint(ref.size());
   sample_velocity_joint.setValue(ref);
 
