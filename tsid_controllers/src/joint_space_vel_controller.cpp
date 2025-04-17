@@ -42,6 +42,13 @@ controller_interface::CallbackReturn JointSpaceVelTsidController::on_configure(
     controller_name + "/joint_velocity_cmd", 1,
     std::bind(&JointSpaceVelTsidController::setVelocityCb, this, _1));
 
+  // Publisher for current command
+  publisher_current_cmd_ =
+    get_node()->create_publisher<sensor_msgs::msg::JointState>(
+    controller_name + "/joint_velocity_cmd_curr", 1);
+
+  velocity_cmd_ = Eigen::VectorXd::Zero(params_.joint_command_names.size());
+
   // Joint Velocity Task
   task_joint_velocity_ = new tsid::tasks::TaskJointVel(
     "task-joint-velocity", *robot_wrapper_, dt_.seconds());
@@ -120,6 +127,23 @@ JointSpaceVelTsidController::update(
   state.first[6] = 1.0;
   compute_problem_and_set_command(state.first, state.second); // q and v
 
+
+  //Publishing the current command
+  auto message = sensor_msgs::msg::JointState();
+  message.header.stamp = get_node()->get_clock()->now();
+
+  message.name = joint_command_names_;
+  message.position.resize(joint_command_names_.size());
+  message.velocity.resize(joint_command_names_.size());
+  message.effort.resize(joint_command_names_.size());
+
+  for (size_t i = 0; i < joint_command_names_.size(); i++) {
+    message.position[i] = 0.0;
+    message.velocity[i] = velocity_cmd_[i];
+    message.effort[i] = 0.0;
+  }
+
+  publisher_current_cmd_->publish(message);
   return controller_interface::return_type::OK;
 }
 
