@@ -198,6 +198,9 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
 
   first_tsid_iter_ = true;
 
+  q_min_.resize(joint_names_.size());
+  q_max_.resize(joint_names_.size());
+
   DefaultVelocityTasks();
 
   // Initializing solver
@@ -416,15 +419,24 @@ void TsidVelocityControl::DefaultVelocityTasks()
   // Joint Bounds Task
   task_joint_bounds_ = new tsid::tasks::TaskJointPosVelAccBounds(
     "task-joint-bounds", *robot_wrapper_, dt_.seconds(), false);
-  q_min_ = model_.lowerPositionLimit.tail(model_.nv - 6) + 0.05 * Eigen::VectorXd::Ones(
-    model_.nv - 6);
-  q_max_ = model_.upperPositionLimit.tail(model_.nv - 6) - 0.05 * Eigen::VectorXd::Ones(
-    model_.nv - 6);
 
-  for (Eigen::Index i = 0; i < q_max_.size(); i++) {
-    std::cout << "q_max" << q_max_[i] << std::endl;
-    std::cout << "q_min" << q_min_[i] << std::endl;
+  double threshold = 0.05;
+  for (auto joint : joint_names_) {
+    if (model_.joints[model_.getJointId(joint)].shortname().find("P") != std::string::npos) {
+      threshold = 0.0;
+    } else if (model_.joints[model_.getJointId(joint)].shortname().find("R") != std::string::npos) {
+      threshold =
+        0.05;
+    }
+    q_min_[jnt_id_[joint]] =
+      model_.lowerPositionLimit.tail(model_.nv - 6)[model_.getJointId(joint) - 2] + threshold;
+    q_max_[jnt_id_[joint]] =
+      model_.upperPositionLimit.tail(model_.nv - 6)[model_.getJointId(joint) - 2] - threshold;
+
+    std::cout << "Joint: " << joint << " q_min: " << q_min_[jnt_id_[joint]] <<
+      " q_max: " << q_max_[jnt_id_[joint]] << std::endl;
   }
+
 
   task_joint_bounds_->setPositionBounds(q_min_, q_max_);
 
