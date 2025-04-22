@@ -1,4 +1,14 @@
 tsid_controllers:
+  root_joint_type: {
+    type: string,
+    description: "Type of the robot root joint.",
+    read_only: true,
+    validation: {
+      one_of<>: [["JointModelFreeFlyer", "JointModelFixed"]],
+    },
+    default_value: "JointModelFixed"
+  }
+
   joint_state_names: {
     type: string_array,
     default_value: [],
@@ -323,5 +333,50 @@ tsid_controllers:
         description: "Maximum z position of the cube",
       }
       
+  cartesian_force_gain:
+    __map_ee_names:
+      kp_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force gain in x direction",
+      }
+      kp_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force gain in y direction",
+      }
+      kp_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force gain in z direction",
+      }
+      kp_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force gain in roll direction",
+      }
+      kp_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force gain in pitch direction",
+      }
+      kp_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force gain in yaw direction",
+      }
+    
+  ft_sensor:
+    __map_ee_names:
+      name: {
+        type: string,
+        description: "Force sensor name.",
+      }
+      filter_cutoff: {
+        type: double,
+        default_value: 0.1,
+        description: "Cut-off frequency of the force sensor filter",
+      }
+
 
 
