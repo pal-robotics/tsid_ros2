@@ -7,6 +7,7 @@ find_package(geometry_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/EePos.msg"
   "msg/EePosArray.msg"
+  "msg/EeWrench.msg"
   DEPENDENCIES
     geometry_msgs
   ADD_LINTER_TESTS
