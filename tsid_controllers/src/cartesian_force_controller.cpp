@@ -18,6 +18,10 @@
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/rnea.hpp"
 #include "pinocchio/parsers/urdf.hpp"
+#include <pinocchio/algorithm/frames.hpp>
+#include <pinocchio/algorithm/compute-all-terms.hpp>
+#include <pinocchio/algorithm/crba.hpp>
+
 
 #include "controller_interface/helpers.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -134,11 +138,8 @@ controller_interface::CallbackReturn CartesianForceController::on_configure(
       get_node()->create_publisher<geometry_msgs::msg::Pose>("current_position", 10);
   }
 
-  // Creating a map between index and end-effector
+  // Creating a map between index and end-effector ordered based on pinocchio
   ee_names_ = params_.ee_names; // backup the ee_names.
-  for (size_t i = 0; i < params_.ee_names.size(); i++) {
-    ee_id_.emplace(params_.ee_names[i], i);
-  }
 
   // Create the state and command interfaces
   state_interfaces_.reserve(3 * joint_names_.size());
@@ -240,6 +241,20 @@ controller_interface::CallbackReturn CartesianForceController::on_configure(
       1e3 / this->get_update_rate()));
   RCLCPP_INFO(get_node()->get_logger(), "Control period: %f", dt_.seconds());
 
+  data_ = pinocchio::Data(model_);
+  size_t count_ee = 0;
+
+  for (const auto & frame : model_.frames) {
+    for (const auto & ee_name : params_.ee_names) {
+      if (frame.name == ee_name) {
+        ee_id_[frame.name] = count_ee++;
+
+        RCLCPP_INFO(
+          get_node()->get_logger(), "End effector %s found in the model, with index %u",
+          frame.name.c_str(), ee_id_[frame.name]);
+      }
+    }
+  }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -357,7 +372,6 @@ controller_interface::CallbackReturn CartesianForceController::on_deactivate(
 controller_interface::return_type CartesianForceController::update(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-
   // Updating params if new ones are available
   updateParams();
 
@@ -379,8 +393,9 @@ controller_interface::return_type CartesianForceController::update(
   if (params_.root_joint_type == "JointModelFreeFlyer") {
     /// @todo acquire the base state from somewhere.
   }
+
   for (const auto & joint : joint_names_) {
-    auto jid = model_.getJointId(joint) - 1;
+    auto jid = model_.getJointId(joint) - 2;
     q.tail(model_.nq - 7)[jid] =
       joint_state_interfaces_[0][jnt_id_[joint]].get().get_value();
     v.tail(model_.nv - 6)[jid] =
@@ -401,8 +416,49 @@ controller_interface::return_type CartesianForceController::update(
     *get_node()->get_clock(),
     500,
     "Controller time: %f", controller_current_time_);
+
   Eigen::VectorXd tau_cmd = Eigen::VectorXd::Zero(model_.nq - 7);
 
+  Eigen::MatrixXd J(6, model_.nv); // 6xN for spatial velocity
+
+  const pinocchio::FrameIndex ee_id = model_.getFrameId(ee_names_[0]);
+
+  pinocchio::computeFrameJacobian(model_, data_, q, ee_id, pinocchio::LOCAL_WORLD_ALIGNED, J);
+
+  // 3. Desired force at end-effector (spatial force, 6D vector)
+  /* Eigen::VectorXd F_ee_des(6);
+ // Fill this with desired force + torque
+
+ // 4. Compute desired joint torque
+   Eigen::VectorXd tau_des = J.transpose() * F_ee_des;
+
+ // 5. Compute desired joint acceleration
+   Eigen::VectorXd qdd_des = M.ldlt().solve(tau_des - data.nle);
+ */
+  // Update kinematics
+  pinocchio::forwardKinematics(model_, data_, q, v);
+  pinocchio::updateFramePlacements(model_, data_);
+
+
+// Compute M(q)
+  pinocchio::crba(model_, data_, q);
+  data_.M.triangularView<Eigen::StrictlyLower>() =
+    data_.M.transpose().triangularView<Eigen::StrictlyLower>();
+
+  Eigen::MatrixXd M = data_.M;
+
+// Compute C(q,v)*v + g(q)
+  Eigen::VectorXd nle = pinocchio::nonLinearEffects(model_, data_, q, v);
+
+// Compute external wrench contribution
+  Eigen::VectorXd tau_ext = Eigen::VectorXd::Zero(model_.nv);
+
+// Final command
+  Eigen::VectorXd tau = nle;// - tau_ext;
+
+  tau_cmd = tau.tail(model_.nv - 6);
+
+  // Compute the gravity compensation
 
   // Setting the command to the joint command interfaces (send gravity compensation)
   for (const auto & joint : joint_command_names_) {
@@ -414,7 +470,14 @@ controller_interface::return_type CartesianForceController::update(
     }
     bool ret =
       joint_command_interfaces_[jnt_command_id_[joint]].get().set_value(
-      tau_cmd.tail(model_.nq - 7)[model_.getJointId(joint) + offset]);
+      tau_cmd[model_.getJointId(joint) + offset]);
+
+    RCLCPP_INFO_THROTTLE(
+      get_node()->get_logger(),
+      *get_node()->get_clock(),
+      500,
+      "Torque command for joint %s: %f",
+      joint.c_str(), tau_cmd[model_.getJointId(joint) + offset]);
     // gravity compensation
     //  bool ret =
     //   joint_command_interfaces_[jnt_command_id_[joint]].get().set_value(
@@ -502,6 +565,7 @@ void CartesianForceController::read_sensor_data()
   if (params_.root_joint_type == "JointModelFreeFlyer") {
     /// @todo acquire the base state from somewhere.
   }
+
   for (size_t i = 0; i < joint_names_.size(); i++) {
     sensor_data_.q.tail(model_.nq - 7)(i) =
       joint_state_interfaces_[0][i].get().get_value();
@@ -518,7 +582,9 @@ void CartesianForceController::read_sensor_data()
     sensor_data_.dfts[ee].toVector() =
       force_filters_.at(ee).getWrenchDerivative();
   }
+
 }
+
 
 }  // namespace dynamic_tsid_controller
 

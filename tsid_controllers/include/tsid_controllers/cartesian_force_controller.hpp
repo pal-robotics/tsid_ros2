@@ -95,6 +95,8 @@ private:
   std::map<std::string, std::vector<std::string>> ft_sensor_interfaces_;
   std::map<std::string, ForceDerivativeFilter> force_filters_;
 
+  pinocchio::Data data_;
+
   bool local_frame_ = false;
   bool first_update_ = true;
   bool tuning_mode_ = false;
