@@ -21,6 +21,9 @@
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/compute-all-terms.hpp>
 #include <pinocchio/algorithm/crba.hpp>
+#include <pinocchio/multibody/model.hpp>
+#include <pinocchio/multibody/data.hpp>
+#include <pinocchio/spatial/fwd.hpp>
 
 
 #include "controller_interface/helpers.hpp"
@@ -378,6 +381,16 @@ controller_interface::return_type CartesianForceController::update(
   // Read the current measurement.
   read_sensor_data();
 
+  RCLCPP_INFO(
+    get_node()->get_logger(),
+    "Force-Torque Sensor Data: Forces - [%f, %f, %f], Torques - [%f, %f, %f]",
+    sensor_data_.fts[ee_names_[0]].toVector()[0],
+    sensor_data_.fts[ee_names_[0]].toVector()[1],
+    sensor_data_.fts[ee_names_[0]].toVector()[2],
+    sensor_data_.fts[ee_names_[0]].toVector()[3],
+    sensor_data_.fts[ee_names_[0]].toVector()[4],
+    sensor_data_.fts[ee_names_[0]].toVector()[5]);
+
   // Set external force from ft sensor
   /*for (size_t i = 0; i < ee_names_.size(); ++i) {
     tsid::trajectories::TrajectorySample f_ext;
@@ -439,6 +452,16 @@ controller_interface::return_type CartesianForceController::update(
   pinocchio::forwardKinematics(model_, data_, q, v);
   pinocchio::updateFramePlacements(model_, data_);
 
+  // Find frame position
+  const pinocchio::Frame & f = model_.frames[ee_id];
+  const pinocchio::SE3 & se3 = data_.oMi[f.parent].act(f.placement);
+
+  // Print current position
+  RCLCPP_INFO(
+    get_node()->get_logger(),
+    "Current position of end effector %s: %f %f %f",
+    f.name.c_str(), se3.translation()[0], se3.translation()[1],
+    se3.translation()[2]);
 
 // Compute M(q)
   pinocchio::crba(model_, data_, q);
@@ -451,10 +474,16 @@ controller_interface::return_type CartesianForceController::update(
   Eigen::VectorXd nle = pinocchio::nonLinearEffects(model_, data_, q, v);
 
 // Compute external wrench contribution
+
+  pinocchio::Motion wrench_vec(sensor_data_.fts[ee_names_[0]].toVector());
+  pinocchio::Motion wrench_ext = se3.act(wrench_vec);
+
+  Eigen::VectorXd tau_ex = J.transpose() * wrench_ext.toVector();
   Eigen::VectorXd tau_ext = Eigen::VectorXd::Zero(model_.nv);
 
+
 // Final command
-  Eigen::VectorXd tau = nle;// - tau_ext;
+  Eigen::VectorXd tau = nle - tau_ex;
 
   tau_cmd = tau.tail(model_.nv - 6);
 
