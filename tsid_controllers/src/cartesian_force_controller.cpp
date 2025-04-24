@@ -230,6 +230,12 @@ controller_interface::CallbackReturn CartesianForceController::on_configure(
     RCLCPP_INFO_STREAM(get_node()->get_logger(), "Model: " << model_);
   }
 
+  // taking gain from parameters
+  auto gain = params_.cartesian_force_gain.ee_names_map.at(ee_names_[0]);
+  kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch, gain.kp_yaw;
+  kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch, gain.kd_yaw;
+  ki_gain << gain.ki_x, gain.ki_y, gain.ki_z, gain.ki_roll, gain.ki_pitch, gain.ki_yaw;
+
   /*
    * VMO: if we need to check the mass of the model to verify that it is more
    * or less realistic. IPE: 18.21225 arms+torso ~= what we expected
@@ -432,11 +438,11 @@ controller_interface::return_type CartesianForceController::update(
 
   Eigen::VectorXd tau_cmd = Eigen::VectorXd::Zero(model_.nq - 7);
 
-  Eigen::MatrixXd J(6, model_.nv); // 6xN for spatial velocity
+  //Eigen::MatrixXd J(6, model_.nv); // 6xN for spatial velocity
 
   const pinocchio::FrameIndex ee_id = model_.getFrameId(ee_names_[0]);
 
-  pinocchio::computeFrameJacobian(model_, data_, q, ee_id, pinocchio::LOCAL_WORLD_ALIGNED, J);
+  //pinocchio::computeFrameJacobian(model_, data_, q, ee_id, pinocchio::LOCAL_WORLD_ALIGNED, J);
 
   // 3. Desired force at end-effector (spatial force, 6D vector)
   /* Eigen::VectorXd F_ee_des(6);
@@ -450,18 +456,11 @@ controller_interface::return_type CartesianForceController::update(
  */
   // Update kinematics
   pinocchio::forwardKinematics(model_, data_, q, v);
+  pinocchio::computeJointJacobians(model_, data_, q);   //
   pinocchio::updateFramePlacements(model_, data_);
-
   // Find frame position
-  const pinocchio::Frame & f = model_.frames[ee_id];
-  const pinocchio::SE3 & se3 = data_.oMi[f.parent].act(f.placement);
+  const pinocchio::SE3 & oMf = data_.oMf[ee_id];        // Transform from base to EE
 
-  // Print current position
-  RCLCPP_INFO(
-    get_node()->get_logger(),
-    "Current position of end effector %s: %f %f %f",
-    f.name.c_str(), se3.translation()[0], se3.translation()[1],
-    se3.translation()[2]);
 
 // Compute M(q)
   pinocchio::crba(model_, data_, q);
@@ -474,16 +473,41 @@ controller_interface::return_type CartesianForceController::update(
   Eigen::VectorXd nle = pinocchio::nonLinearEffects(model_, data_, q, v);
 
 // Compute external wrench contribution
+  pinocchio::Force wrench_vec(sensor_data_.fts[ee_names_[0]].toVector());
+  pinocchio::Force wrench_vec_der(sensor_data_.dfts[ee_names_[0]].toVector());
+  pinocchio::Force wrench_des_force(desired_wrench_);
 
-  pinocchio::Motion wrench_vec(sensor_data_.fts[ee_names_[0]].toVector());
-  pinocchio::Motion wrench_ext = se3.act(wrench_vec);
 
-  Eigen::VectorXd tau_ex = J.transpose() * wrench_ext.toVector();
-  Eigen::VectorXd tau_ext = Eigen::VectorXd::Zero(model_.nv);
+  Eigen::Matrix<double, 6, Eigen::Dynamic> J(6, model_.nv);
+  getFrameJacobian(model_, data_, ee_id, pinocchio::LOCAL, J);
+  //J = oMf.toActionMatrix() * J;
+  //pinocchio::Motion wrench_ext = se3.act(wrench_vec);
+
+  Eigen::VectorXd wrench_vector = wrench_vec.toVector();       // size 6
+  Eigen::VectorXd wrench_des_vec = wrench_des_force.toVector();       // size 6
+  //Eigen::VectorXd wrench_der_vec = wrench_base_der.toVector(); // size 6
+
+// Apply gains element-wise — both gain vectors must also be VectorXd of size 6
+  Eigen::VectorXd pid_output = wrench_des_vec.array() + kp_gain.array() *
+    (wrench_des_vec.array() - wrench_vector.array());
+
+// Project into joint torques
+  Eigen::VectorXd tau_ext = J.transpose() * pid_output;
+
+
+  // Stream tau ext
+  if (debug_backdoor_) {
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "External torque: %f %f %f %f %f %f %f %f %f %f %f %f %f",
+      tau_ext[0], tau_ext[1], tau_ext[2], tau_ext[3], tau_ext[4], tau_ext[5],
+      tau_ext[6], tau_ext[7], tau_ext[8], tau_ext[9], tau_ext[10], tau_ext[11], tau_ext[12]
+    );
+  }
 
 
 // Final command
-  Eigen::VectorXd tau = nle - tau_ex;
+  Eigen::VectorXd tau = nle + tau_ext;
 
   tau_cmd = tau.tail(model_.nv - 6);
 
@@ -524,68 +548,70 @@ void CartesianForceController::updateParams()
 {
   if (param_listener_->is_old(params_)) {
     params_ = param_listener_->get_params();
+
+    // Update gain pid
+    auto gain = params_.cartesian_force_gain.ee_names_map.at(ee_names_[0]);
+    kp_gain << gain.kp_x, gain.kp_y, gain.kp_z, gain.kp_roll, gain.kp_pitch, gain.kp_yaw;
+    kd_gain << gain.kd_x, gain.kd_y, gain.kd_z, gain.kd_roll, gain.kd_pitch, gain.kd_yaw;
   }
 }
 
 void CartesianForceController::setWrenchCallback(
   tsid_controller_msgs::msg::EeWrench::ConstSharedPtr msg)
 {
-  /* if (get_node()->get_current_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
-     for (size_t i = 0; i < msg->ee_name.size(); ++i) {
-       if (std::find(ee_names_.begin(), ee_names_.end(), msg->ee_name[i]) == ee_names_.end()) {
-         RCLCPP_WARN(
-           get_node()->get_logger(), "End effector %s not found in the list of end effectors, this command will be ignored",
-           msg->ee_name[i].c_str());
-       } else {
-         const auto & ee = msg->ee_name[i];
+  if (get_node()->get_current_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+    for (size_t i = 0; i < msg->ee_name.size(); ++i) {
+      if (std::find(ee_names_.begin(), ee_names_.end(), msg->ee_name[i]) == ee_names_.end()) {
+        RCLCPP_WARN(
+          get_node()->get_logger(), "End effector %s not found in the list of end effectors, this command will be ignored",
+          msg->ee_name[i].c_str());
+      } else {
 
-         RCLCPP_INFO(
-           get_node()->get_logger(), "Setting desired wrench for end effector %s", ee.c_str());
+        const auto & ee = msg->ee_name[i];
 
-         auto h_ee_ =
-           robot_wrapper_->framePosition(formulation_->data(), model_.getFrameId(ee_names_[i]));
+        RCLCPP_INFO(
+          get_node()->get_logger(), "Setting desired wrench for end effector %s", ee.c_str());
 
-         // Taking desired wrench from the message
-         pinocchio::Force desired_wrench;
-         desired_wrench.linear() << msg->desired_wrench[i].force.x,
-           msg->desired_wrench[i].force.y,
-           msg->desired_wrench[i].force.z;
-         desired_wrench.angular() << msg->desired_wrench[i].torque.x,
-           msg->desired_wrench[i].torque.y,
-           msg->desired_wrench[i].torque.z;
 
-         RCLCPP_INFO(
-           get_node()->get_logger(), "Desired wrench for end effector %s: %f %f %f %f %f %f",
-           ee.c_str(), desired_wrench.linear()[0], desired_wrench.linear()[1],
-           desired_wrench.linear()[2], desired_wrench.angular()[0],
-           desired_wrench.angular()[1], desired_wrench.angular()[2]);
+        // Taking desired wrench from the message
+        desired_wrench_ << msg->desired_wrench[i].force.x,
+          msg->desired_wrench[i].force.y,
+          msg->desired_wrench[i].force.z, msg->desired_wrench[i].torque.x,
+          msg->desired_wrench[i].torque.y,
+          msg->desired_wrench[i].torque.z;
 
-         if (local_frame_) {
-           // Transforming the wrench to the base frame
-           // TODO: check this transformation!!!!
-           RCLCPP_INFO(
-             get_node()->get_logger(), "Transforming the wrench to the base frame");
-           desired_wrench = h_ee_.act(desired_wrench);
-           RCLCPP_INFO(
-             get_node()->get_logger(), "Desired wrench for end effector in base frame %s: %f %f %f %f %f %f",
-             ee.c_str(), desired_wrench.linear().x(), desired_wrench.linear().y(),
-             desired_wrench.linear().z(), desired_wrench.angular().x(),
-             desired_wrench.angular().y(), desired_wrench.angular().z());
-         }
+        RCLCPP_INFO(
+          get_node()->get_logger(), "Desired wrench for end effector %s: %f %f %f %f %f %f",
+          ee.c_str(), desired_wrench_[0], desired_wrench_[1],
+          desired_wrench_[2], desired_wrench_[3], desired_wrench_[4],
+          desired_wrench_[5]);
 
-         RCLCPP_INFO(
-           get_node()->get_logger(), "Reference set for end effector %s", ee.c_str());
+/* if (local_frame_) {
+          // Transforming the wrench to the base frame
+          // TODO: check this transformation!!!!
+          RCLCPP_INFO(
+            get_node()->get_logger(), "Transforming the wrench to the base frame");
+          desired_wrench = h_ee_.act(desired_wrench);
+          RCLCPP_INFO(
+            get_node()->get_logger(), "Desired wrench for end effector in base frame %s: %f %f %f %f %f %f",
+            ee.c_str(), desired_wrench.linear().x(), desired_wrench.linear().y(),
+            desired_wrench.linear().z(), desired_wrench.angular().x(),
+            desired_wrench.angular().y(), desired_wrench.angular().z());
+        }
+        */
 
-       }
-     }
-   } else {
-     RCLCPP_WARN_THROTTLE(
-       get_node()->get_logger(),
-       *get_node()->get_clock(),
-       1000,
-       "Controller is not active, the command will be ignored");
-   }*/
+        RCLCPP_INFO(
+          get_node()->get_logger(), "Reference set for end effector %s", ee.c_str());
 
+      }
+    }
+  } else {
+    RCLCPP_WARN_THROTTLE(
+      get_node()->get_logger(),
+      *get_node()->get_clock(),
+      1000,
+      "Controller is not active, the command will be ignored");
+  }
 }
 
 void CartesianForceController::read_sensor_data()

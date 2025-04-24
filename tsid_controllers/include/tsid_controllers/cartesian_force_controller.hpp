@@ -94,6 +94,10 @@ private:
   std::map<std::string, semantic_components::ForceTorqueSensor> ft_sensors_;
   std::map<std::string, std::vector<std::string>> ft_sensor_interfaces_;
   std::map<std::string, ForceDerivativeFilter> force_filters_;
+  Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
+  Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
+  Eigen::VectorXd ki_gain = Eigen::VectorXd::Zero(6);
+  Eigen::VectorXd desired_wrench_ = Eigen::VectorXd::Zero(6);
 
   pinocchio::Data data_;
 

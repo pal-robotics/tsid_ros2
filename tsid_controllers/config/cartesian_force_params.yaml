@@ -35,12 +35,18 @@ cartesian_force_controller:
 
     cartesian_force_gain:
          arm_left_7_link:
-          kp_x: 0.0
-          kp_y: 0.0
-          kp_z: 0.0
-          kp_roll: 0.0
-          kp_pitch: 0.0
-          kp_yaw: 0.0
+          kp_x: 2.0
+          kp_y: 2.0
+          kp_z: 2.0
+          kp_roll: 1.0
+          kp_pitch: 1.0
+          kp_yaw: 1.0
+          kd_x: 0.0
+          kd_y: 0.0
+          kd_z: 0.0
+          kd_roll: 0.0
+          kd_pitch: 0.0
+          kd_yaw: 0.0
 
     ft_sensor:
       arm_left_7_link:

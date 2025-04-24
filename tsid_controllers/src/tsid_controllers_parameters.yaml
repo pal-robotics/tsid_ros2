@@ -365,6 +365,67 @@ tsid_controllers:
         default_value: 0.0,
         description: "Cartesian force gain in yaw direction",
       }
+      kd_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force damping in x direction",
+      }
+      kd_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force damping in y direction",
+      }
+      kd_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force damping in z direction",
+      }
+      kd_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force damping in roll direction",
+      }
+      kd_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force damping in pitch direction",
+      }
+      kd_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force damping in yaw direction",
+      }
+      ki_x: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force integral gain in x direction",
+      }
+      ki_y: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force integral gain in y direction",
+      }
+      ki_z: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force integral gain in z direction",
+      }
+      ki_roll: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force integral gain in roll direction",
+      }
+      ki_pitch: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force integral gain in pitch direction",
+      }
+      ki_yaw: {
+        type: double,
+        default_value: 0.0,
+        description: "Cartesian force integral gain in yaw direction",
+      }
+      
     
   ft_sensor:
     __map_ee_names:
