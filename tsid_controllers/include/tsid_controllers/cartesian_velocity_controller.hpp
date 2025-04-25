@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 #include "tsid_controllers/tsid_velocity_control.hpp"
 #include "hardware_interface/component_parser.hpp"
 #include "pal_utils/better_enums.hpp"
@@ -79,6 +80,8 @@ private:
 
   std::vector<std::string> ee_names_;
   rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_curr_pos_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_curr_twist_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_des_twist_;
   Eigen::VectorXd vel_des_;
 
 };

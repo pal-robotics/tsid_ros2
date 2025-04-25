@@ -61,9 +61,15 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
 
   std::string controller_name = get_node()->get_name();
 
-  //  creating publisher for current pose ee
+  //  creating publisher for current pose ee and vel
   publisher_curr_pos_ = get_node()->create_publisher<geometry_msgs::msg::Pose>(
     controller_name + "/current_position", 10);
+
+  publisher_des_twist_ = get_node()->create_publisher<geometry_msgs::msg::Twist>(
+    controller_name + "/desired_velocity", 10);
+
+  publisher_curr_twist_ = get_node()->create_publisher<geometry_msgs::msg::Twist>(
+    controller_name + "/current_velocity", 10);
 
 
   // Pose reference callback
@@ -184,6 +190,34 @@ CartesianVelocityController::update(
   current_pose.orientation.w = m_p[6];
 
   publisher_curr_pos_->publish(current_pose);
+
+  auto vel_ee = robot_wrapper_->frameVelocity(
+    formulation_->data(), model_.getFrameId(ee_names_[0])).toVector();
+
+  pinocchio::SE3 wMl;
+
+  wMl.setIdentity();
+  pinocchio::Motion vel_ee_vec(vel_ee);
+  auto vel_ee_base = wMl.act(vel_ee_vec);
+
+  geometry_msgs::msg::Twist current_twist;
+  current_twist.linear.x = vel_ee_base.linear().x();
+  current_twist.linear.y = vel_ee_base.linear().y();
+  current_twist.linear.z = vel_ee_base.linear().z();
+  current_twist.angular.x = vel_ee_base.angular().x();
+  current_twist.angular.y = vel_ee_base.angular().y();
+  current_twist.angular.z = vel_ee_base.angular().z();
+  publisher_curr_twist_->publish(current_twist);
+
+  geometry_msgs::msg::Twist desired_twist;
+  desired_twist.linear.x = vel_des_[0];
+  desired_twist.linear.y = vel_des_[1];
+  desired_twist.linear.z = vel_des_[2];
+  desired_twist.angular.x = vel_des_[3];
+  desired_twist.angular.y = vel_des_[4];
+  desired_twist.angular.z = vel_des_[5];
+  publisher_des_twist_->publish(desired_twist);
+
   for (size_t i = 0; i < getParams().ee_names.size(); i++) {
     ee_names_[i] = getParams().ee_names[i];
     visualizeBoundingBox(ee_names_[i]);

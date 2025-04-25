@@ -84,6 +84,9 @@ private:
   Eigen::Quaterniond quat_des_;
   Eigen::Vector3d vel_curr_;
   Eigen::Vector3d un_dir_vec;
+  Eigen::Quaterniond quat_des_local_;
+  pinocchio::SE3 h_ee_initial_;
+
   double t_acc_ = 0.0;
   double t_flat_ = 0.0;
   double t_align_ = 0.0;
