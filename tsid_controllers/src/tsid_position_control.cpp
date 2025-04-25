@@ -185,7 +185,15 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
     model_,
     tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
 
+  robot_wrapper_closed_loop_ = new tsid::robots::RobotWrapper(
+    model_,
+    tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
+
   formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
+
+  formulation_closed_loop_ = new tsid::InverseDynamicsFormulationAccForce(
+    "tsid", *robot_wrapper_closed_loop_, true);
+
   first_tsid_iter_ = true;
 
   DefaultPositionTasks();
