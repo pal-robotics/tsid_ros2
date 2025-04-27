@@ -181,7 +181,7 @@ controller_interface::CallbackReturn CartesianForceController::on_configure(
   command_interfaces_names_.clear();
   for (const auto & joint : joint_command_names_) {
     command_interfaces_names_.push_back(
-      joint + "/" + hardware_interface::HW_IF_EFFORT);
+      joint + "_inertia_shaping_controller/" + joint + "/effort");
   }
 
   // 6d force (wrench) reference callback
