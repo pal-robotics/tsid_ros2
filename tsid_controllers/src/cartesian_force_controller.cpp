@@ -458,9 +458,6 @@ controller_interface::return_type CartesianForceController::update(
   pinocchio::forwardKinematics(model_, data_, q, v);
   pinocchio::computeJointJacobians(model_, data_, q);   //
   pinocchio::updateFramePlacements(model_, data_);
-  // Find frame position
-  const pinocchio::SE3 & oMf = data_.oMf[ee_id];        // Transform from base to EE
-
 
 // Compute M(q)
   pinocchio::crba(model_, data_, q);
