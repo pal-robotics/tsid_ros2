@@ -22,7 +22,6 @@
   <depend>pinocchio</depend>
   <depend>tsid</depend>
   <depend>eiquadprog</depend>
-  <depend>semantic_components</depend>
 
   <depend>tsid_controller_msgs</depend>
   <depend>tsid_interactive_marker</depend>
