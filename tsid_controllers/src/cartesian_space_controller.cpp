@@ -368,7 +368,9 @@ void CartesianSpaceController::setPoseCallback(
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
           tsid::math::SE3ToVector(se3, ref);
 
-          rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
+          Eigen::Matrix3d identity = Eigen::Matrix3d::Identity();
+
+          rot_des_ = quat.toRotationMatrix() * identity;
 
         }
 
@@ -480,7 +482,6 @@ void CartesianSpaceController::interpolate(double t_curr)
     return;
   } else if (position_end_ == position_start_) {
     position_curr_ = position_end_;
-    double t_ = 2.0;
     if (t_curr > (t_flat_ + 2 * t_acc_)) {
       rot_des_ = quat_des_.toRotationMatrix();
       return;
