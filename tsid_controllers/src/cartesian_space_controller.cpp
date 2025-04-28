@@ -74,7 +74,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
     controller_name + "/current_position", 10);
 
   publisher_des_pos = get_node()->create_publisher<geometry_msgs::msg::Pose>(
-    "tsid_cartesian_controller/desired_pose", 10);
+    controller_name + "/desired_pose", 10);
 
   ee_cmd_sub_ =
     get_node()->create_subscription<tsid_controller_msgs::msg::EePos>(
@@ -179,6 +179,11 @@ CartesianSpaceController::update(
   std::pair<Eigen::VectorXd, Eigen::VectorXd> state = getActualState();
   state.first[6] = 1.0;
 
+  const tsid::solvers::HQPData solverData = formulation_closed_loop_->computeProblemData(
+    0.0,
+    state.first,
+    state.second);
+
   // if (iteration % 4 == 0) {
   interpolate(t_curr_);
 
@@ -204,33 +209,64 @@ CartesianSpaceController::update(
   // }
 
   compute_problem_and_set_command(state.first, state.second);   // q and v
-  auto h_ee_ = TsidPositionControl::robot_wrapper_->framePosition(
-    TsidPositionControl::formulation_->data(),
+
+  auto h_ee_ = TsidPositionControl::robot_wrapper_closed_loop_->framePosition(
+    TsidPositionControl::formulation_closed_loop_->data(),
     TsidPositionControl::model_.getFrameId(ee_names_[0]));
 
-  Eigen::Quaterniond quat_curr(h_ee_.rotation());
-  geometry_msgs::msg::Pose current_pose;
-  current_pose.position.x = h_ee_.translation()[0];
-  current_pose.position.y = h_ee_.translation()[1];
-  current_pose.position.z = h_ee_.translation()[2];
-  current_pose.orientation.x = quat_curr.x();
-  current_pose.orientation.y = quat_curr.y();
-  current_pose.orientation.z = quat_curr.z();
-  current_pose.orientation.w = quat_curr.w();
+  if (!local_frame_) {
+    Eigen::Quaterniond quat_curr(h_ee_.rotation());
+    geometry_msgs::msg::Pose current_pose;
+    current_pose.position.x = h_ee_.translation()[0];
+    current_pose.position.y = h_ee_.translation()[1];
+    current_pose.position.z = h_ee_.translation()[2];
+    current_pose.orientation.x = quat_curr.x();
+    current_pose.orientation.y = quat_curr.y();
+    current_pose.orientation.z = quat_curr.z();
+    current_pose.orientation.w = quat_curr.w();
 
-  publisher_curr_pos->publish(current_pose);
+    publisher_curr_pos->publish(current_pose);
 
 
-  geometry_msgs::msg::Pose desired_pose;
-  desired_pose.position.x = position_end_[0];
-  desired_pose.position.y = position_end_[1];
-  desired_pose.position.z = position_end_[2];
-  desired_pose.orientation.x = quat_des_.x();
-  desired_pose.orientation.y = quat_des_.y();
-  desired_pose.orientation.z = quat_des_.z();
-  desired_pose.orientation.w = quat_des_.w();
+    geometry_msgs::msg::Pose desired_pose;
+    desired_pose.position.x = position_end_[0];
+    desired_pose.position.y = position_end_[1];
+    desired_pose.position.z = position_end_[2];
+    desired_pose.orientation.x = quat_des_.x();
+    desired_pose.orientation.y = quat_des_.y();
+    desired_pose.orientation.z = quat_des_.z();
+    desired_pose.orientation.w = quat_des_.w();
 
-  publisher_des_pos->publish(desired_pose);
+    publisher_des_pos->publish(desired_pose);
+  } else {
+    pinocchio::SE3 eMo = h_ee_initial_.inverse(); // end-effector frame
+    Eigen::Vector3d h_ee_local = eMo.act(h_ee_.translation()); // transforms point
+    Eigen::Quaterniond quat_curr_local(eMo.rotation() * h_ee_.rotation()); // quaternion in ee frame
+    geometry_msgs::msg::Pose current_pose;
+    current_pose.position.x = h_ee_local[0];
+    current_pose.position.y = h_ee_local[1];
+    current_pose.position.z = h_ee_local[2];
+    current_pose.orientation.x = quat_curr_local.x();
+    current_pose.orientation.y = quat_curr_local.y();
+    current_pose.orientation.z = quat_curr_local.z();
+    current_pose.orientation.w = quat_curr_local.w();
+
+    publisher_curr_pos->publish(current_pose);
+
+    Eigen::Vector3d position_end_local = eMo.act(position_end_); // transforms point
+
+    geometry_msgs::msg::Pose desired_pose;
+    desired_pose.position.x = position_end_local[0];
+    desired_pose.position.y = position_end_local[1];
+    desired_pose.position.z = position_end_local[2];
+    desired_pose.orientation.x = quat_des_local_.x();
+    desired_pose.orientation.y = quat_des_local_.y();
+    desired_pose.orientation.z = quat_des_local_.z();
+    desired_pose.orientation.w = quat_des_local_.w();
+
+    publisher_des_pos->publish(desired_pose);
+  }
+
 
   iteration++;
 
@@ -293,6 +329,14 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
+          quat_des_local_ = quat;
+
+          std::cout << "Quat des x" << quat.x() << std::endl;
+          std::cout << "Quat des y" << quat.y() << std::endl;
+          std::cout << "Quat des z" << quat.z() << std::endl;
+          std::cout << "Quat des w" << quat.w() << std::endl;
+
+
           Eigen::Matrix3d rot_des = h_ee_.rotation() * quat.toRotationMatrix();
 
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
@@ -318,12 +362,15 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
+
           Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
 
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
           tsid::math::SE3ToVector(se3, ref);
 
-          rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
+          Eigen::Matrix3d identity = Eigen::Matrix3d::Identity();
+
+          rot_des_ = quat.toRotationMatrix() * identity;
 
         }
 
@@ -338,23 +385,14 @@ void CartesianSpaceController::setPoseCallback(
         t_curr_ = 0.0;
         position_start_ = h_ee_.translation();
         quat_init_ = h_ee_.rotation();
-        std::cout << "position_start_ " << position_start_ << std::endl;
-        std::cout << "position_end_ " << position_end_ << std::endl;
+        h_ee_initial_ = h_ee_;
+        // std::cout << "position_start_ " << position_start_ << std::endl;
+        // std::cout << "position_end_ " << position_end_ << std::endl;
         // std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
         position_end_ = desired_pose_[ee_id_[ee]];
 
         compute_trajectory_params();
 
-        geometry_msgs::msg::Pose current_pose;
-        current_pose.position.x = h_ee_.translation()[0];
-        current_pose.position.y = h_ee_.translation()[1];
-        current_pose.position.z = h_ee_.translation()[2];
-        current_pose.orientation.x = 0;
-        current_pose.orientation.y = 0;
-        current_pose.orientation.z = 0;
-        current_pose.orientation.w = 1;
-
-        publisher_curr_pos->publish(current_pose);
       }
 
       if (!TsidPositionControl::isPoseInsideBoundingBox(position_end_, ee_names_[i])) {
@@ -425,6 +463,7 @@ void CartesianSpaceController::compute_trajectory_params()
 
   // Chek if the orientation trajectory is longer than the position trajectory and computing the scale factor
   if (2 * t_acc_ + t_flat_ < t_ang) {
+    std::cout << "t_ang " << t_ang << std::endl;
     scale_ = (2 * t_acc_ + t_flat_) / t_ang;
     t_flat_ = t_ang - 2 * t_acc_;
     a_max = a_max * scale_;
@@ -443,12 +482,11 @@ void CartesianSpaceController::interpolate(double t_curr)
     return;
   } else if (position_end_ == position_start_) {
     position_curr_ = position_end_;
-    double t_ = 2.0;
-    if (t_curr > t_) {
+    if (t_curr > (t_flat_ + 2 * t_acc_)) {
       rot_des_ = quat_des_.toRotationMatrix();
       return;
     } else {
-      Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_), quat_des_);
+      Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_flat_ + 2 * t_acc_), quat_des_);
       rot_des_ = quat.toRotationMatrix();
       return;
     }

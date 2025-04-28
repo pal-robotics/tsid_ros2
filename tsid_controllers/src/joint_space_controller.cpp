@@ -41,6 +41,11 @@ controller_interface::CallbackReturn JointSpaceTsidController::on_configure(
     controller_name + "/joint_position_cmd", 1,
     std::bind(&JointSpaceTsidController::setPositionCb, this, _1));
 
+  // Publisher for current command
+  publisher_current_cmd =
+    get_node()->create_publisher<sensor_msgs::msg::JointState>(
+    controller_name + "/joint_position_cmd_curr", 1);
+
   return TsidPositionControl::on_configure(prev_state);
 }
 
@@ -82,6 +87,24 @@ controller_interface::return_type JointSpaceTsidController::update(
 
 
   compute_problem_and_set_command(state.first, state.second); //q and v
+
+  //Publishing the current command
+  auto message = sensor_msgs::msg::JointState();
+  message.header.stamp = get_node()->get_clock()->now();
+
+  message.name = joint_command_names_;
+  message.position.resize(joint_command_names_.size());
+  message.velocity.resize(joint_command_names_.size());
+  message.effort.resize(joint_command_names_.size());
+
+  for (size_t i = 0; i < joint_command_names_.size(); i++) {
+    message.position[i] = position_end_[i];
+    message.velocity[i] = 0.0;
+    message.effort[i] = 0.0;
+  }
+
+  publisher_current_cmd->publish(message);
+
   return controller_interface::return_type::OK;
 }
 

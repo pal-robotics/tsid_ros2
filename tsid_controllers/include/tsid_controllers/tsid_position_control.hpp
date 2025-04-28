@@ -97,7 +97,11 @@ protected:
   std::vector<std::vector<std::string>> state_interface_names_;
   std::shared_ptr<tsid_controllers::ParamListener> param_listener_;
   tsid::robots::RobotWrapper * robot_wrapper_;
+  tsid::robots::RobotWrapper * robot_wrapper_closed_loop_;
+
   tsid::InverseDynamicsFormulationAccForce * formulation_;
+  tsid::InverseDynamicsFormulationAccForce * formulation_closed_loop_;
+
   std::vector<std::string> joint_names_;
   pinocchio::Model model_;
   double v_scaling_;

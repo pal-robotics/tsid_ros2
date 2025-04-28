@@ -185,7 +185,15 @@ controller_interface::CallbackReturn TsidPositionControl::on_configure(
     model_,
     tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
 
+  robot_wrapper_closed_loop_ = new tsid::robots::RobotWrapper(
+    model_,
+    tsid::robots::RobotWrapper::RootJointType::FLOATING_BASE_SYSTEM, true);
+
   formulation_ = new tsid::InverseDynamicsFormulationAccForce("tsid", *robot_wrapper_, true);
+
+  formulation_closed_loop_ = new tsid::InverseDynamicsFormulationAccForce(
+    "tsid", *robot_wrapper_closed_loop_, true);
+
   first_tsid_iter_ = true;
 
   DefaultPositionTasks();
@@ -414,7 +422,20 @@ void TsidPositionControl::DefaultPositionTasks()
   Eigen::VectorXd v_max = v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
   Eigen::VectorXd v_min = -v_max;
   //Eigen::VectorXd a_max = params_.acc_lim * Eigen::VectorXd::Ones(model_.nv - 6);
+
+  // Check if some of the state joints are not in the command joints
+  for (const auto & joint : joint_names_) {
+    if (std::find(
+        joint_command_names_.begin(), joint_command_names_.end(),
+        joint) == joint_command_names_.end())
+    {
+      v_max[model_.getJointId(joint) - 2] = 0;
+      v_min[model_.getJointId(joint) - 2] = 0;
+    }
+  }
   task_joint_bounds_->setVelocityBounds(v_max);
+
+
   //task_joint_bounds_->setAccelerationBounds(a_max);
   formulation_->addMotionTask(*task_joint_bounds_, bounds_weight, bounds_priority, transition_time);
 

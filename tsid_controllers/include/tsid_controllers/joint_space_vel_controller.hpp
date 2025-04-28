@@ -23,6 +23,7 @@
 #include "tsid_controllers/tasks/task-vel-joint.hpp"
 #include "tsid_controllers/tsid_velocity_control.hpp"
 #include <controller_interface/controller_interface.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 
 namespace tsid_controllers
 {
@@ -51,6 +52,9 @@ private:
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_velocity_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
     joint_cmd_sub_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_current_cmd_;
+  Eigen::VectorXd velocity_cmd_;
+
 
 };
 } // namespace tsid_controllers
