@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.4 (2025-04-29)
+------------------
 * Merge branch 'vmo/fix_for_tests' into 'master'
   Vmo/fix for tests
   See merge request control/tsid_framework!24
