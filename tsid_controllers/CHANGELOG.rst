@@ -2,6 +2,21 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'vmo/fix_for_tests' into 'master'
+  Vmo/fix for tests
+  See merge request control/tsid_framework!24
+* Fix pipeline
+* Fix publish of command
+* Adding publisher cartesian current
+* Adding possibility to have joint state not in joint command
+* Adding threshold for min and max joint
+* Adding topic for velocity command
+* Adding topic for plot the current cmd velocity
+* Adding publisher of current command for plot test
+* Contributors: vivianamorlando
+
 0.0.3 (2025-04-11)
 ------------------
 * 0.0.2
