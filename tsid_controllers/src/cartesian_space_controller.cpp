@@ -368,9 +368,7 @@ void CartesianSpaceController::setPoseCallback(
           pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
           tsid::math::SE3ToVector(se3, ref);
 
-          Eigen::Matrix3d identity = Eigen::Matrix3d::Identity();
-
-          rot_des_ = quat.toRotationMatrix() * identity;
+          rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
 
         }
 
@@ -463,7 +461,6 @@ void CartesianSpaceController::compute_trajectory_params()
 
   // Chek if the orientation trajectory is longer than the position trajectory and computing the scale factor
   if (2 * t_acc_ + t_flat_ < t_ang) {
-    std::cout << "t_ang " << t_ang << std::endl;
     scale_ = (2 * t_acc_ + t_flat_) / t_ang;
     t_flat_ = t_ang - 2 * t_acc_;
     a_max = a_max * scale_;
