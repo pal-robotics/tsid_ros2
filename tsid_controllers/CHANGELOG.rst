@@ -2,6 +2,11 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixing orientation cartesian
+* Contributors: vivianamorlando
+
 0.0.4 (2025-04-29)
 ------------------
 * Merge branch 'vmo/fix_for_tests' into 'master'

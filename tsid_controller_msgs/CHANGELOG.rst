@@ -2,6 +2,9 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.0.4 (2025-04-29)
 ------------------
 
