@@ -387,16 +387,6 @@ controller_interface::return_type CartesianForceController::update(
   // Read the current measurement.
   read_sensor_data();
 
-  RCLCPP_INFO(
-    get_node()->get_logger(),
-    "Force-Torque Sensor Data: Forces - [%f, %f, %f], Torques - [%f, %f, %f]",
-    sensor_data_.fts[ee_names_[0]].toVector()[0],
-    sensor_data_.fts[ee_names_[0]].toVector()[1],
-    sensor_data_.fts[ee_names_[0]].toVector()[2],
-    sensor_data_.fts[ee_names_[0]].toVector()[3],
-    sensor_data_.fts[ee_names_[0]].toVector()[4],
-    sensor_data_.fts[ee_names_[0]].toVector()[5]);
-
   // Set external force from ft sensor
   /*for (size_t i = 0; i < ee_names_.size(); ++i) {
     tsid::trajectories::TrajectorySample f_ext;
@@ -429,12 +419,6 @@ controller_interface::return_type CartesianForceController::update(
   } else {
     controller_current_time_ = get_node()->get_clock()->now().seconds() - controller_time_origin_;
   }
-
-  RCLCPP_INFO_THROTTLE(
-    get_node()->get_logger(),
-    *get_node()->get_clock(),
-    500,
-    "Controller time: %f", controller_current_time_);
 
   Eigen::VectorXd tau_cmd = Eigen::VectorXd::Zero(model_.nq - 7);
 
@@ -491,18 +475,6 @@ controller_interface::return_type CartesianForceController::update(
 // Project into joint torques
   Eigen::VectorXd tau_ext = J.transpose() * pid_output;
 
-
-  // Stream tau ext
-  if (debug_backdoor_) {
-    RCLCPP_INFO(
-      get_node()->get_logger(),
-      "External torque: %f %f %f %f %f %f %f %f %f %f %f %f %f",
-      tau_ext[0], tau_ext[1], tau_ext[2], tau_ext[3], tau_ext[4], tau_ext[5],
-      tau_ext[6], tau_ext[7], tau_ext[8], tau_ext[9], tau_ext[10], tau_ext[11], tau_ext[12]
-    );
-  }
-
-
 // Final command
   Eigen::VectorXd tau = nle + tau_ext;
 
@@ -522,12 +494,6 @@ controller_interface::return_type CartesianForceController::update(
       joint_command_interfaces_[jnt_command_id_[joint]].get().set_value(
       tau_cmd[model_.getJointId(joint) + offset]);
 
-    RCLCPP_INFO_THROTTLE(
-      get_node()->get_logger(),
-      *get_node()->get_clock(),
-      500,
-      "Torque command for joint %s: %f",
-      joint.c_str(), tau_cmd[model_.getJointId(joint) + offset]);
     // gravity compensation
     //  bool ret =
     //   joint_command_interfaces_[jnt_command_id_[joint]].get().set_value(
@@ -566,22 +532,12 @@ void CartesianForceController::setWrenchCallback(
 
         const auto & ee = msg->ee_name[i];
 
-        RCLCPP_INFO(
-          get_node()->get_logger(), "Setting desired wrench for end effector %s", ee.c_str());
-
-
         // Taking desired wrench from the message
         desired_wrench_ << msg->desired_wrench[i].force.x,
           msg->desired_wrench[i].force.y,
           msg->desired_wrench[i].force.z, msg->desired_wrench[i].torque.x,
           msg->desired_wrench[i].torque.y,
           msg->desired_wrench[i].torque.z;
-
-        RCLCPP_INFO(
-          get_node()->get_logger(), "Desired wrench for end effector %s: %f %f %f %f %f %f",
-          ee.c_str(), desired_wrench_[0], desired_wrench_[1],
-          desired_wrench_[2], desired_wrench_[3], desired_wrench_[4],
-          desired_wrench_[5]);
 
 /* if (local_frame_) {
           // Transforming the wrench to the base frame
