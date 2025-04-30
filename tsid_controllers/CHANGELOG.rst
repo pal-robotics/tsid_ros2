@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.5 (2025-04-30)
+------------------
 * Fixing orientation cartesian
 * Contributors: vivianamorlando
 
