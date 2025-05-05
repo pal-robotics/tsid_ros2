@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.6 (2025-05-05)
+------------------
 * Merge branch 'dco/torque_interface' into 'master'
   Use torque interface for force control
   See merge request control/tsid_framework!23
