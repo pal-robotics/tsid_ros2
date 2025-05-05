@@ -29,6 +29,7 @@ ament_auto_add_library(tsid_controllers SHARED
   src/tasks/task-se3-equality.cpp
   src/cartesian_velocity_controller.cpp
   src/sin_joint.cpp
+  src/cartesian_force_controller.cpp
 )
 
 target_link_libraries(tsid_controllers

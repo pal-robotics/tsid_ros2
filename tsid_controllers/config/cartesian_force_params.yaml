@@ -1,0 +1,58 @@
+cartesian_force_controller:
+  ros__parameters:
+    type: tsid_controllers/CartesianForceController
+
+    local_frame: false
+    root_joint_type: JointModelFreeFlyer
+    
+    joint_state_names:
+      - arm_left_1_joint
+      - arm_left_2_joint
+      - arm_left_3_joint
+      - arm_left_4_joint
+      - arm_left_5_joint
+      - arm_left_6_joint
+      - arm_left_7_joint
+#      - torso_lift_joint
+
+    joint_command_names:
+      - arm_left_1_joint
+      - arm_left_2_joint
+      - arm_left_3_joint
+      - arm_left_4_joint
+      - arm_left_5_joint
+      - arm_left_6_joint
+      - arm_left_7_joint
+
+    interface_name: position
+
+    ee_names:
+      - arm_left_7_link
+
+    velocity_scaling: 1.0
+
+    posture_gain: 1.0
+
+    cartesian_force_gain:
+         arm_left_7_link:
+          kp_x: 2.0
+          kp_y: 2.0
+          kp_z: 2.0
+          kp_roll: 1.0
+          kp_pitch: 1.0
+          kp_yaw: 1.0
+          kd_x: 0.0
+          kd_y: 0.0
+          kd_z: 0.0
+          kd_roll: 0.0
+          kd_pitch: 0.0
+          kd_yaw: 0.0
+
+    ft_sensor:
+      arm_left_7_link:
+        name: wrist_left_ft_sensor
+        filter_cutoff: 0.1
+
+
+
+
