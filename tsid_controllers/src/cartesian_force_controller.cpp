@@ -443,13 +443,6 @@ controller_interface::return_type CartesianForceController::update(
   pinocchio::computeJointJacobians(model_, data_, q);   //
   pinocchio::updateFramePlacements(model_, data_);
 
-// Compute M(q)
-  pinocchio::crba(model_, data_, q);
-  data_.M.triangularView<Eigen::StrictlyLower>() =
-    data_.M.transpose().triangularView<Eigen::StrictlyLower>();
-
-  Eigen::MatrixXd M = data_.M;
-
 // Compute C(q,v)*v + g(q)
   Eigen::VectorXd nle = pinocchio::nonLinearEffects(model_, data_, q, v);
 
