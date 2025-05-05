@@ -2,6 +2,16 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'dco/torque_interface' into 'master'
+  Use torque interface for force control
+  See merge request control/tsid_framework!23
+* Fix pipeline
+* Fix pipelines
+* Adding msg for ee wrench
+* Contributors: vivianamorlando
+
 0.0.5 (2025-04-30)
 ------------------
 

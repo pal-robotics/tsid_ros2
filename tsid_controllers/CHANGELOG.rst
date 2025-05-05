@@ -2,6 +2,25 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'dco/torque_interface' into 'master'
+  Use torque interface for force control
+  See merge request control/tsid_framework!23
+* removed M computation
+* removed spamming
+* revert to effort-control-based force control
+* Fix pipelines
+* Rm unused dependencies
+* use inertia shaping interface
+* Fixing wrench inj local
+* Adding ft sensors data
+* Adding formulation
+* Adding force controller tsid independent
+* Adding parameters for force controller
+* Adding force filter
+* Contributors: Daniel Costanzi, danielcostanzi, vivianamorlando
+
 0.0.5 (2025-04-30)
 ------------------
 * Fixing orientation cartesian
