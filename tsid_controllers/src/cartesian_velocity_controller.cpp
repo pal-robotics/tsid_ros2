@@ -49,6 +49,18 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  local_frame_ = getParams().local_frame;
+
+  if (local_frame_) {
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the end effector frame");
+  } else {
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the base frame");
+  }
+
   // Storing names of desired end effector
   ee_names_.resize(getParams().ee_names.size());
   H_ee_0_.resize(getParams().ee_names.size());
@@ -263,10 +275,28 @@ void CartesianVelocityController::setVelCallback(
   vel_des_ << msg->data[0], msg->data[1], msg->data[2], msg->data[3],
     msg->data[4], msg->data[5];
 
-  tsid::trajectories::TrajectorySample sample_vel_ee =
-    traj_ee_[ee_id_[ee]].computeNext();
-  sample_vel_ee.setValue(vel_des_);
-  task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+  if (local_frame_) {
+    // Compute the desired velocity in the base frame
+    auto h_ee_ = TsidVelocityControl::robot_wrapper_->framePosition(
+      TsidVelocityControl::formulation_->data(),
+      TsidVelocityControl::model_.getFrameId(ee_names_[0]));
+
+    pinocchio::SE3 wMl;
+    wMl.setIdentity();
+    wMl.rotation() = h_ee_.rotation();
+    pinocchio::Motion vel_ee(vel_des_);
+    auto vel_ee_base = wMl.act(vel_ee);
+
+    tsid::trajectories::TrajectorySample sample_vel_ee =
+      traj_ee_[ee_id_[ee]].computeNext();
+    sample_vel_ee.setValue(vel_ee_base.toVector());
+    task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+  } else {
+    tsid::trajectories::TrajectorySample sample_vel_ee =
+      traj_ee_[ee_id_[ee]].computeNext();
+    sample_vel_ee.setValue(vel_des_);
+    task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+  }
   RCLCPP_INFO_THROTTLE(
     get_node()->get_logger(), *get_node()->get_clock(), 1000, "Desired velocity: %f %f %f %f %f %f",
     vel_des_[0], vel_des_[1], vel_des_[2], vel_des_[3], vel_des_[4],
