@@ -431,6 +431,7 @@ tsid_controllers:
     __map_ee_names:
       name: {
         type: string,
+        default_value: "",
         description: "Force sensor name.",
       }
       filter_cutoff: {
