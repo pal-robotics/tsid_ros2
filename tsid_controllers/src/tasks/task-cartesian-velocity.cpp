@@ -187,27 +187,47 @@ const ConstraintBase & TaskCartesianVelocity::compute(
   // Transformation from local to world
   m_wMl.rotation(oMi.rotation());
 
-
-  m_v_error =
-    m_v_ref - m_wMl.act(v_frame);      // vel err in local world-oriented frame
-
-
-  m_a_error = (m_v_error - v_err_prev ) / dt_;    // acc err in local world-oriented frame
-
-  m_p_error += m_v_error * dt_;
+  if (m_local_frame) {
+    m_v_error =
+      m_wMl.act(m_v_ref) - m_wMl.act(v_frame);    // vel err in local world-oriented frame
 
 
-  // desired acc in local world-oriented frame
-  m_drift = m_wMl.act(m_drift);
+    m_a_error = (m_v_error - v_err_prev ) / dt_;  // acc err in local world-oriented frame
 
-  m_a_des = m_Kp.cwiseProduct(m_v_error.toVector()) +
-    m_Kd.cwiseProduct(m_a_error.toVector()) + m_Ki.cwiseProduct(m_p_error.toVector()) +
-    m_v_ref.toVector() + m_robot.model().gravity.toVector();
+    m_p_error += m_v_error * dt_;
 
-  // Use an explicit temporary `m_J_rotated` here to avoid allocations.
-  m_J_rotated.noalias() = m_wMl.toActionMatrix() * m_J;
-  m_J = m_J_rotated;
 
+    // desired acc in local world-oriented frame
+    m_drift = m_wMl.act(m_drift);
+
+    m_a_des = m_Kp.cwiseProduct(m_v_error.toVector()) +
+      m_Kd.cwiseProduct(m_a_error.toVector()) + m_Ki.cwiseProduct(m_p_error.toVector()) +
+      m_wMl.act(m_v_ref).toVector() + m_robot.model().gravity.toVector();
+
+    // Use an explicit temporary `m_J_rotated` here to avoid allocations.
+    m_J_rotated.noalias() = m_wMl.toActionMatrix() * m_J;
+    m_J = m_J_rotated;
+  } else {
+    m_v_error =
+      m_v_ref - m_wMl.act(v_frame);    // vel err in local world-oriented frame
+
+
+    m_a_error = (m_v_error - v_err_prev ) / dt_;  // acc err in local world-oriented frame
+
+    m_p_error += m_v_error * dt_;
+
+
+    // desired acc in local world-oriented frame
+    m_drift = m_wMl.act(m_drift);
+
+    m_a_des = m_Kp.cwiseProduct(m_v_error.toVector()) +
+      m_Kd.cwiseProduct(m_a_error.toVector()) + m_Ki.cwiseProduct(m_p_error.toVector()) +
+      m_v_ref.toVector() + m_robot.model().gravity.toVector();
+
+    // Use an explicit temporary `m_J_rotated` here to avoid allocations.
+    m_J_rotated.noalias() = m_wMl.toActionMatrix() * m_J;
+    m_J = m_J_rotated;
+  }
 
   m_v_error_vec = m_v_error.toVector();
   m_v_ref_vec = m_v_ref.toVector();

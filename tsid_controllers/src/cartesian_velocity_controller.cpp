@@ -116,7 +116,7 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
     task_ee_[ee_id_[ee]]->setMask(ee_mask);
-    task_ee_[ee_id_[ee]]->useLocalFrame(false);
+    task_ee_[ee_id_[ee]]->useLocalFrame(local_frame_);
 
     double ee_weight = 1;
     int ee_priority = 1;
@@ -240,12 +240,11 @@ CartesianVelocityController::update(
 
       Eigen::VectorXd corrected_vel = vel_des_;
 
-      for (int j = 0; j < 3; j++) {
-        if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
-          (vel_des_[j] * direction[j] <= std::numeric_limits<double>::epsilon()))
-        {
-          corrected_vel[j] = 0.0;
-        }
+      for (int j = 0; j < 6; j++) {
+        /* if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
+           (vel_des_[j] * direction[j] <= std::numeric_limits<double>::epsilon()))
+         {*/
+        corrected_vel[j] = 0.0;
       }
 
       tsid::trajectories::TrajectorySample sample_vel_ee =
@@ -275,28 +274,11 @@ void CartesianVelocityController::setVelCallback(
   vel_des_ << msg->data[0], msg->data[1], msg->data[2], msg->data[3],
     msg->data[4], msg->data[5];
 
-  if (local_frame_) {
-    // Compute the desired velocity in the base frame
-    auto h_ee_ = TsidVelocityControl::robot_wrapper_->framePosition(
-      TsidVelocityControl::formulation_->data(),
-      TsidVelocityControl::model_.getFrameId(ee_names_[0]));
-
-    pinocchio::SE3 wMl;
-    wMl.setIdentity();
-    wMl.rotation() = h_ee_.rotation();
-    pinocchio::Motion vel_ee(vel_des_);
-    auto vel_ee_base = wMl.act(vel_ee);
-
-    tsid::trajectories::TrajectorySample sample_vel_ee =
-      traj_ee_[ee_id_[ee]].computeNext();
-    sample_vel_ee.setValue(vel_ee_base.toVector());
-    task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
-  } else {
-    tsid::trajectories::TrajectorySample sample_vel_ee =
-      traj_ee_[ee_id_[ee]].computeNext();
-    sample_vel_ee.setValue(vel_des_);
-    task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
-  }
+  tsid::trajectories::TrajectorySample sample_vel_ee =
+    traj_ee_[ee_id_[ee]].computeNext();
+  sample_vel_ee.setValue(vel_des_);
+  task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+  //}
   RCLCPP_INFO_THROTTLE(
     get_node()->get_logger(), *get_node()->get_clock(), 1000, "Desired velocity: %f %f %f %f %f %f",
     vel_des_[0], vel_des_[1], vel_des_[2], vel_des_[3], vel_des_[4],
