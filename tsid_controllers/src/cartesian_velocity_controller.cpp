@@ -208,7 +208,6 @@ CartesianVelocityController::update(
 
   pinocchio::SE3 wMl;
 
-  wMl.setIdentity();
   pinocchio::Motion vel_ee_vec(vel_ee);
   auto vel_ee_base = wMl.act(vel_ee_vec);
 
@@ -238,13 +237,16 @@ CartesianVelocityController::update(
     if (!isPoseInsideBoundingBox(current_pose, ee_names_[i])) {
       const Eigen::Vector3d & direction = getCorrectionDirection(ee_names_[i]);
 
+      Eigen::VectorXd vel_reference = task_ee_[ee_id_[ee_names_[i]]]->velocity_ref();
       Eigen::VectorXd corrected_vel = vel_des_;
 
-      for (int j = 0; j < 6; j++) {
-        /* if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
-           (vel_des_[j] * direction[j] <= std::numeric_limits<double>::epsilon()))
-         {*/
-        corrected_vel[j] = 0.0;
+      for (int j = 0; j < 3; j++) {
+        if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
+          (vel_des_[j] * direction[j] < std::numeric_limits<double>::epsilon()))
+        {
+          corrected_vel.setZero(); // Set all components of corrected_vel to zero
+          continue; // Skip further processing for this end effector
+        }
       }
 
       tsid::trajectories::TrajectorySample sample_vel_ee =

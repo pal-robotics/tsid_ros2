@@ -207,6 +207,12 @@ const ConstraintBase & TaskCartesianVelocity::compute(
     // Use an explicit temporary `m_J_rotated` here to avoid allocations.
     m_J_rotated.noalias() = m_wMl.toActionMatrix() * m_J;
     m_J = m_J_rotated;
+
+    m_v_error_vec = m_v_error.toVector();
+    m_v_ref_vec = m_wMl.act(m_v_ref).toVector();
+    m_v = v_frame.toVector();
+    v_err_prev = m_v_error;
+
   } else {
     m_v_error =
       m_v_ref - m_wMl.act(v_frame);    // vel err in local world-oriented frame
@@ -227,12 +233,13 @@ const ConstraintBase & TaskCartesianVelocity::compute(
     // Use an explicit temporary `m_J_rotated` here to avoid allocations.
     m_J_rotated.noalias() = m_wMl.toActionMatrix() * m_J;
     m_J = m_J_rotated;
-  }
 
-  m_v_error_vec = m_v_error.toVector();
-  m_v_ref_vec = m_v_ref.toVector();
-  m_v = v_frame.toVector();
-  v_err_prev = m_v_error;
+    m_v_error_vec = m_v_error.toVector();
+    m_v_ref_vec = m_v_ref.toVector();
+    m_v = v_frame.toVector();
+    v_err_prev = m_v_error;
+
+  }
 
 
   int idx = 0;
