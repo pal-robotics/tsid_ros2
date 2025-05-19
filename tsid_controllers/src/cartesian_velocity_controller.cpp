@@ -242,7 +242,7 @@ CartesianVelocityController::update(
 
       for (int j = 0; j < 3; j++) {
         if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
-          (vel_des_[j] * direction[j] < std::numeric_limits<double>::epsilon()))
+          (vel_reference[j] * direction[j] < std::numeric_limits<double>::epsilon()))
         {
           corrected_vel.setZero(); // Set all components of corrected_vel to zero
           continue; // Skip further processing for this end effector
