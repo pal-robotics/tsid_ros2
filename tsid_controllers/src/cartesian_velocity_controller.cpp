@@ -49,6 +49,18 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  local_frame_ = getParams().local_frame;
+
+  if (local_frame_) {
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the end effector frame");
+  } else {
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      "The reference is considered as expressed in the base frame");
+  }
+
   // Storing names of desired end effector
   ee_names_.resize(getParams().ee_names.size());
   H_ee_0_.resize(getParams().ee_names.size());
@@ -104,7 +116,7 @@ controller_interface::CallbackReturn CartesianVelocityController::on_configure(
     Eigen::VectorXd ee_mask = Eigen::VectorXd::Zero(6);
     ee_mask << 1, 1, 1, 1, 1, 1;
     task_ee_[ee_id_[ee]]->setMask(ee_mask);
-    task_ee_[ee_id_[ee]]->useLocalFrame(false);
+    task_ee_[ee_id_[ee]]->useLocalFrame(local_frame_);
 
     double ee_weight = 1;
     int ee_priority = 1;
@@ -196,7 +208,6 @@ CartesianVelocityController::update(
 
   pinocchio::SE3 wMl;
 
-  wMl.setIdentity();
   pinocchio::Motion vel_ee_vec(vel_ee);
   auto vel_ee_base = wMl.act(vel_ee_vec);
 
@@ -226,13 +237,15 @@ CartesianVelocityController::update(
     if (!isPoseInsideBoundingBox(current_pose, ee_names_[i])) {
       const Eigen::Vector3d & direction = getCorrectionDirection(ee_names_[i]);
 
+      Eigen::VectorXd vel_reference = task_ee_[ee_id_[ee_names_[i]]]->velocity_ref();
       Eigen::VectorXd corrected_vel = vel_des_;
 
       for (int j = 0; j < 3; j++) {
         if (std::abs(direction[j]) > std::numeric_limits<double>::epsilon() &&
-          (vel_des_[j] * direction[j] <= std::numeric_limits<double>::epsilon()))
+          (vel_reference[j] * direction[j] < std::numeric_limits<double>::epsilon()))
         {
-          corrected_vel[j] = 0.0;
+          corrected_vel.setZero(); // Set all components of corrected_vel to zero
+          continue; // Skip further processing for this end effector
         }
       }
 
@@ -267,6 +280,7 @@ void CartesianVelocityController::setVelCallback(
     traj_ee_[ee_id_[ee]].computeNext();
   sample_vel_ee.setValue(vel_des_);
   task_ee_[ee_id_[ee]]->setReference(sample_vel_ee);
+  //}
   RCLCPP_INFO_THROTTLE(
     get_node()->get_logger(), *get_node()->get_clock(), 1000, "Desired velocity: %f %f %f %f %f %f",
     vel_des_[0], vel_des_[1], vel_des_[2], vel_des_[3], vel_des_[4],

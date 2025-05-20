@@ -71,6 +71,7 @@ protected:
 
 private:
   std::map<std::string, int> ee_id_;
+  bool local_frame_ = false;
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   std::vector<tsid::tasks::TaskCartesianVelocity *> task_ee_;
   std::vector<pinocchio::SE3> H_ee_0_;
