@@ -7,7 +7,7 @@
   </description>
   <maintainer email="viviana.morlando@pal-robotics.com">Viviana Morlando</maintainer>
 
-  <license>Propietary</license>
+  <license>Apache License 2.0</license>
   <author email="viviana.morlando@pal-robotics.com">Viviana Morlando</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
