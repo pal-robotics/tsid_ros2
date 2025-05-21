@@ -2,6 +2,9 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.0.6 (2025-05-05)
 ------------------
 * Merge branch 'dco/torque_interface' into 'master'

@@ -2,6 +2,15 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix check direction when in ee frame
+* Adding bounding check
+* Adding local frame directly in the task
+* Adding local frame to cartesian velocity
+* Fix bug in parameters ft sensor
+* Contributors: vivianamorlando
+
 0.0.6 (2025-05-05)
 ------------------
 * Merge branch 'dco/torque_interface' into 'master'
