@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.7 (2025-05-21)
+------------------
 * Fix check direction when in ee frame
 * Adding bounding check
 * Adding local frame directly in the task
