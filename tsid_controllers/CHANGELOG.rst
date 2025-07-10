@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.9 (2025-07-10)
+------------------
 * Merge branch 'change-license' into 'master'
   change license from Propietary to Apache License 2.0
   See merge request control/tsid_framework!28
