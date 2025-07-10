@@ -2,6 +2,14 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'change-license' into 'master'
+  change license from Propietary to Apache License 2.0
+  See merge request control/tsid_framework!28
+* change license from Propietary to Apache License 2.0
+* Contributors: ileniaperrella
+
 0.0.8 (2025-05-21)
 ------------------
 
