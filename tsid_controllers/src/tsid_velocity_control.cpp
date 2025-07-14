@@ -20,6 +20,18 @@
 #include <pinocchio/algorithm/model.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include <pluginlib/class_list_macros.hpp>
+#include "pinocchio/fwd.hpp"
+#include "pinocchio/algorithm/compute-all-terms.hpp"
+#include "pinocchio/algorithm/model.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include "pinocchio/algorithm/rnea.hpp"
+#include "pinocchio/parsers/urdf.hpp"
+#include <pinocchio/algorithm/frames.hpp>
+#include <pinocchio/algorithm/compute-all-terms.hpp>
+#include <pinocchio/algorithm/crba.hpp>
+#include <pinocchio/multibody/model.hpp>
+#include <pinocchio/multibody/data.hpp>
+#include <pinocchio/spatial/fwd.hpp>
 
 using namespace controller_interface;
 
@@ -182,6 +194,7 @@ controller_interface::CallbackReturn TsidVelocityControl::on_configure(
   for (auto joint : model_.names) {
     RCLCPP_INFO(get_node()->get_logger(), "Joint name: %s", joint.c_str());
   }
+
 
   // Getting control period
   dt_ = rclcpp::Duration(
@@ -458,9 +471,22 @@ void TsidVelocityControl::compute_problem_and_set_command(
   Eigen::VectorXd v_ = Eigen::VectorXd::Zero(model_.nv);
   v_.tail(model_.nq - 7) = (q.tail(model_.nq - 7) - q_prev_) / dt_.seconds();
 
+  Eigen::VectorXd q_ = Eigen::VectorXd::Zero(model_.nq);
+  q_[6] = 1;
+
+  if (first_tsid_iter_ || joint_limit_reached_) {
+    q_int_ = q;
+    v_int_ = v;
+    first_tsid_iter_ = false;
+  }
+
+  // Integrating velocity to get position
+  v_int_.head(6) = Eigen::VectorXd::Zero(6);
+  q_.tail(model_.nq - 7) = q_int_.tail(model_.nq - 7);
+
   // Computing the problem data
   const tsid::solvers::HQPData solverData =
-    formulation_->computeProblemData(0.0, q, v);
+    formulation_->computeProblemData(0.0, q_, v_int_);
 
   // Solving the problem
   const auto sol = solver_->solve(solverData);
@@ -471,19 +497,16 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
   a = formulation_->getAccelerations(sol);
 
-  v_cmd = v + a * 0.5 * dt_.seconds();
+  v_cmd = v_int_ + a * 0.5 * dt_.seconds();
 
-  if (first_tsid_iter_ || joint_limit_reached_) {
-    q_int_ = q;
-    first_tsid_iter_ = false;
-  }
+  auto v_com = v_cmd.tail(model_.nv - 6);
+  v_int_.tail(model_.nv - 6) = v_com;
 
-  // Integrating velocity to get position
-  q_int_ = pinocchio::integrate(model_, q_int_, v_cmd * dt_.seconds());
+  q_int_ = pinocchio::integrate(
+    model_, q_int_, v_cmd * dt_.seconds());
 
   q_cmd = q_int_.tail(model_.nq - 7);
 
-  auto v_com = v_cmd.tail(model_.nv - 6);
   double threshold = 0.2;
 
   int indx = 0;
@@ -548,6 +571,8 @@ void TsidVelocityControl::compute_problem_and_set_command(
       RCLCPP_WARN_THROTTLE(
         get_node()->get_logger(), *get_node()->get_clock(), 5000,
         "Joint limit reached");
+
+      v_int_ = Eigen::VectorXd::Zero(v_int_.size());
 
       if (!command_interfaces_[jnt_command_id_[joint]].set_value(
           0.0))

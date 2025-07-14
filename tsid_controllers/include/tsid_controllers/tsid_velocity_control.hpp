@@ -82,7 +82,9 @@ public:
   std::pair<Eigen::VectorXd, Eigen::VectorXd> getActualState() const;
 
   void compute_problem_and_set_command(Eigen::VectorXd q, Eigen::VectorXd v);
-  bool isPoseInsideBoundingBox(const geometry_msgs::msg::Pose & pose, const std::string & effector_name);
+  bool isPoseInsideBoundingBox(
+    const geometry_msgs::msg::Pose & pose,
+    const std::string & effector_name);
   void visualizePose(const geometry_msgs::msg::Pose & pose);
   void visualizeBoundingBox(const std::string & effector_name);
   const Eigen::Vector3d & getCorrectionDirection(const std::string & effector_name) const;
@@ -109,6 +111,7 @@ protected:
   rclcpp::Duration dt_;
   bool joint_limit_reached_;
   std::unordered_map<std::string, BoundingBox> bounding_boxes_;
+  pinocchio::Data data_;
 
 private:
   tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
@@ -116,9 +119,10 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_vel_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_curr_pos_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr box_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_pub_;  
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_pub_;
   tsid::trajectories::TrajectoryEuclidianConstant * traj_joint_posture_;
   Eigen::VectorXd q_int_;
+  Eigen::VectorXd v_int_;
   bool first_tsid_iter_;
   Eigen::VectorXd q_min_, q_max_;
   Eigen::VectorXd q_prev_;
