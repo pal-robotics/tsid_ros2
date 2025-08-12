@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.10 (2025-08-12)
+-------------------
 * Add open loop vel
 * Contributors: vivianamorlando
 
