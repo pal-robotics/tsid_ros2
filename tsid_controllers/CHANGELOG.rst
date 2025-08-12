@@ -2,6 +2,11 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add open loop vel
+* Contributors: vivianamorlando
+
 0.0.9 (2025-07-10)
 ------------------
 * Merge branch 'change-license' into 'master'
