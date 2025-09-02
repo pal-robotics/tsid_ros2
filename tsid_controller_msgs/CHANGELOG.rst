@@ -2,6 +2,12 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Adding possibility to absolute pose command
+* Installing include of msgs
+* Contributors: vivianamorlando
+
 0.0.10 (2025-08-12)
 -------------------
 
