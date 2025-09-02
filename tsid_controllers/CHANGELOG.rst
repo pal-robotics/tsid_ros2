@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.11 (2025-09-02)
+-------------------
 * Adding possibility to absolute pose command
 * Contributors: vivianamorlando
 
