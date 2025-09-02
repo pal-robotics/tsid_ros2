@@ -15,12 +15,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_export_dependencies(rosidl_default_runtime)
 
-install(
-  DIRECTORY include/
-  DESTINATION include
-)
-
-ament_export_include_directories(include)
-
 ament_package()
 

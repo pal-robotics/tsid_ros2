@@ -309,52 +309,73 @@ void CartesianSpaceController::setPoseCallback(
           TsidPositionControl::model_.getFrameId(ee_names_[i]));
         Eigen::VectorXd ref = Eigen::VectorXd::Zero(12);
 
-        if (local_frame_) {
-          // Taking desired position from the message
-          pinocchio::Motion desired_pose;
-          desired_pose.setZero();
-          desired_pose.linear() << msg->desired_pose[i].position.x,
-            msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
-          desired_pose = h_ee_.toActionMatrix() * desired_pose.toVector();
+        if (getParams().relative_pose) {
+          if (local_frame_) {
+            // Taking desired position from the message
+            pinocchio::Motion desired_pose;
+            desired_pose.setZero();
+            desired_pose.linear() << msg->desired_pose[i].position.x,
+              msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
+            desired_pose = h_ee_.toActionMatrix() * desired_pose.toVector();
 
-          // Adding displacement to the desired pose
-          desired_pose_[ee_id_[ee]]
-            << h_ee_.translation()[0] + desired_pose.linear()[0],
-            h_ee_.translation()[1] + desired_pose.linear()[1],
-            h_ee_.translation()[2] + desired_pose.linear()[2];
+            // Adding displacement to the desired pose
+            desired_pose_[ee_id_[ee]]
+              << h_ee_.translation()[0] + desired_pose.linear()[0],
+              h_ee_.translation()[1] + desired_pose.linear()[1],
+              h_ee_.translation()[2] + desired_pose.linear()[2];
 
-          // Setting the orientation desired
-          Eigen::Quaterniond quat(msg->desired_pose[i].orientation.w,
-            msg->desired_pose[i].orientation.x,
-            msg->desired_pose[i].orientation.y,
-            msg->desired_pose[i].orientation.z);
+            // Setting the orientation desired
+            Eigen::Quaterniond quat(msg->desired_pose[i].orientation.w,
+              msg->desired_pose[i].orientation.x,
+              msg->desired_pose[i].orientation.y,
+              msg->desired_pose[i].orientation.z);
 
-          quat_des_local_ = quat;
+            quat_des_local_ = quat;
 
-          std::cout << "Quat des x" << quat.x() << std::endl;
-          std::cout << "Quat des y" << quat.y() << std::endl;
-          std::cout << "Quat des z" << quat.z() << std::endl;
-          std::cout << "Quat des w" << quat.w() << std::endl;
+            std::cout << "Quat des x" << quat.x() << std::endl;
+            std::cout << "Quat des y" << quat.y() << std::endl;
+            std::cout << "Quat des z" << quat.z() << std::endl;
+            std::cout << "Quat des w" << quat.w() << std::endl;
 
 
-          Eigen::Matrix3d rot_des = h_ee_.rotation() * quat.toRotationMatrix();
+            Eigen::Matrix3d rot_des = h_ee_.rotation() * quat.toRotationMatrix();
 
-          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
-          tsid::math::SE3ToVector(se3, ref);
+            pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
+            tsid::math::SE3ToVector(se3, ref);
 
-          rot_des_ = h_ee_.rotation() * quat.toRotationMatrix();
+            rot_des_ = h_ee_.rotation() * quat.toRotationMatrix();
+          } else {
+            // Taking desired position from the message
+            pinocchio::Motion desired_pose;
+            desired_pose.setZero();
+            desired_pose.linear() << msg->desired_pose[i].position.x,
+              msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
+
+            // Adding displacement to the desired pose
+            desired_pose_[ee_id_[ee]]
+              << h_ee_.translation()[0] + desired_pose.linear()[0],
+              h_ee_.translation()[1] + desired_pose.linear()[1],
+              h_ee_.translation()[2] + desired_pose.linear()[2];
+
+            // Setting the orientation desired
+            Eigen::Quaterniond quat(msg->desired_pose[i].orientation.w,
+              msg->desired_pose[i].orientation.x,
+              msg->desired_pose[i].orientation.y,
+              msg->desired_pose[i].orientation.z);
+
+
+            Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
+
+            pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
+            tsid::math::SE3ToVector(se3, ref);
+
+            rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
+
+          }
         } else {
           // Taking desired position from the message
-          pinocchio::Motion desired_pose;
-          desired_pose.setZero();
-          desired_pose.linear() << msg->desired_pose[i].position.x,
+          desired_pose_[ee_id_[ee]] << msg->desired_pose[i].position.x,
             msg->desired_pose[i].position.y, msg->desired_pose[i].position.z;
-
-          // Adding displacement to the desired pose
-          desired_pose_[ee_id_[ee]]
-            << h_ee_.translation()[0] + desired_pose.linear()[0],
-            h_ee_.translation()[1] + desired_pose.linear()[1],
-            h_ee_.translation()[2] + desired_pose.linear()[2];
 
           // Setting the orientation desired
           Eigen::Quaterniond quat(msg->desired_pose[i].orientation.w,
@@ -362,15 +383,9 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
-
-          Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
-
-          pinocchio::SE3 se3(rot_des, desired_pose_[ee_id_[ee]]);
-          tsid::math::SE3ToVector(se3, ref);
-
-          rot_des_ = quat.toRotationMatrix() * h_ee_.rotation();
-
+          rot_des_ = quat.toRotationMatrix();
         }
+
 
         tsid::trajectories::TrajectorySample sample_posture_ee =
           traj_ee_[ee_id_[ee]].computeNext();

@@ -55,6 +55,12 @@ tsid_controllers:
     description: "If true, the frame is expressed in the local frame of the end-effector",
   }
 
+  relative_pose: {
+    type: bool,
+    default_value: false,
+    description: "If true, the pose is relative to the current end-effector pose",
+  }
+
   velocity_scaling: {
     type: double,
     default_value: 0.5,
