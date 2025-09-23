@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tsid_interactive_marker</name>
-  <version>0.0.12</version>
+  <version>0.0.13</version>
   <description>Interactive marker for the tsid controller.
   </description>
   <maintainer email="viviana.morlando@pal-robotics.com">Viviana Morlando</maintainer>
