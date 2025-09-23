@@ -2,6 +2,9 @@
 Changelog for package tsid_controller_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.0.11 (2025-09-02)
 -------------------
 * Adding possibility to absolute pose command

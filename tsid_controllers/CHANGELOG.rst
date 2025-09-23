@@ -2,6 +2,12 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix cmakelist
+* Constraint vel of non commanded joint in update function
+* Contributors: vivianamorlando
+
 0.0.11 (2025-09-02)
 -------------------
 * Adding possibility to absolute pose command
