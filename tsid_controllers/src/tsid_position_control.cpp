@@ -322,10 +322,23 @@ void TsidPositionControl::updateParams()
     params_ = param_listener_->get_params();
     RCLCPP_INFO(get_node()->get_logger(), "Updating parameters");
 
+
     v_scaling_ = params_.velocity_scaling;
     Eigen::VectorXd v_max =
       v_scaling_ * model_.velocityLimit.tail(model_.nv - 6);
+
+
+    for (const auto & joint : joint_names_) {
+      if (std::find(
+          joint_command_names_.begin(), joint_command_names_.end(),
+          joint) == joint_command_names_.end())
+      {
+        v_max[model_.getJointId(joint) - 2] = 0;
+      }
+    }
+
     task_joint_bounds_->setVelocityBounds(v_max);
+
 
     //Taking gain for joint posture task
     Eigen::VectorXd kp = Eigen::VectorXd::Zero(robot_wrapper_->nv() - 6);

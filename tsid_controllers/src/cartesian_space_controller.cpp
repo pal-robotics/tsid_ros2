@@ -557,6 +557,7 @@ void CartesianSpaceController::updateParams()
     task_ee_[ee_id_[ee]]->Kp(kp_gain);
     task_ee_[ee_id_[ee]]->Kd(kd_gain);
 
+
   }
 
 }
