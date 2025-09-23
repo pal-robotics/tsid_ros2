@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.12 (2025-09-23)
+-------------------
 * Fix cmakelist
 * Constraint vel of non commanded joint in update function
 * Contributors: vivianamorlando
