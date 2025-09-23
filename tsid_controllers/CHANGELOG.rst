@@ -2,6 +2,11 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix cmakelist for dev
+* Contributors: vivianamorlando
+
 0.0.13 (2025-09-23)
 -------------------
 * Revert fix cmakelist
