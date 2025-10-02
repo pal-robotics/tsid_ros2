@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.1 (2025-10-02)
+------------------
 * Rm unused headers
 * Fix commas
 * Put params that does not need to be changed to true only
