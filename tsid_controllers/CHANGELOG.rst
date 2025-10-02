@@ -2,6 +2,14 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Rm unused headers
+* Fix commas
+* Put params that does not need to be changed to true only
+* Separating cases of relative pose and local frame in order to avoid mismatch
+* Contributors: vivianamorlando
+
 0.1.0 (2025-09-23)
 ------------------
 * Fix cmakelist for dev
