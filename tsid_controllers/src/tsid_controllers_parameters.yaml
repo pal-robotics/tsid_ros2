@@ -39,7 +39,7 @@ tsid_controllers:
     type: string_array,
     default_value: [],
     description: "Name of the end-effectors we want to control",
-    read_only: true
+    read_only: true,
   }
 
   ee_vmax: {
@@ -52,7 +52,7 @@ tsid_controllers:
     type: bool, 
     default_value: false,
     description: "If true, the frame is expressed in the local frame of the end-effector",
-    read_only: true
+    read_only: true,
   }
 
   relative_pose: {
