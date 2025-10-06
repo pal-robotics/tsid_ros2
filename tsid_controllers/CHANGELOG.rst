@@ -2,6 +2,11 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Adding USE_SCOPE_HEADER for pipeline
+* Contributors: vivianamorlando
+
 0.1.1 (2025-10-02)
 ------------------
 * Rm unused headers
