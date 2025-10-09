@@ -2,6 +2,11 @@
 Changelog for package tsid_interactive_marker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix ament_auto warning about headers install destination
+* Contributors: Noel Jimenez
+
 0.2.0 (2025-10-06)
 ------------------
 
