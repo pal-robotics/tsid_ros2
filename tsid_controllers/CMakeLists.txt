@@ -50,4 +50,4 @@ pluginlib_export_plugin_description_file(controller_interface tsid_controllers.x
 
 # endif()
 
-ament_auto_package(USE_SCOPED_HEADER_INSTALL_DIR INSTALL_TO_SHARE launch config)
+ament_auto_package(USE_SCOPED_HEADER_INSTALL_DIR INSTALL_TO_SHARE)
