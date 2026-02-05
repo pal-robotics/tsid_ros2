@@ -88,14 +88,17 @@ private:
   pinocchio::SE3 h_ee_initial_;
 
   double t_acc_ = 0.0;
+  double t_dec_ = 0.0;
   double t_flat_ = 0.0;
   double t_align_ = 0.0;
   double t_curr_ = 0.0;
-  double v_max = 0.15;
+  double v_max_ = 0.15;
+  double v_max_scaled_ = 0.15;
   double a_max = 0.0;
   double omega_max = 2.0;
   double scale_ = 1.0;
   int iteration = 0;
+  double v0 = 0.0;
 };
 } // namespace tsid_controllers
 
