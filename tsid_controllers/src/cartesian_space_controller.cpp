@@ -119,7 +119,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   vel_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
 
 
-  v_max = params_.ee_vmax;
+  v_max_ = params_.ee_vmax;
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -149,7 +149,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
     quat_init_ = H_ee_0_[ee_id_[ee]].rotation();
     quat_des_ = H_ee_0_[ee_id_[ee]].rotation();
     rot_des_ = H_ee_0_[ee_id_[ee]].rotation();
-    vel_curr_ = Eigen::Vector3d::Zero();
+    auto vel_ee = robot_wrapper_->frameVelocity(
+      formulation_->data(), model_.getFrameId(ee_names_[0])).toVector();
+    vel_curr_ = vel_ee.head<3>();
     compute_trajectory_params();
 
 
