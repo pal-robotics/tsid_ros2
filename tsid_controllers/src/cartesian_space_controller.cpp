@@ -455,20 +455,52 @@ void CartesianSpaceController::setPoseCallback(
 
 void CartesianSpaceController::compute_trajectory_params()
 {
-  t_acc_ = 0.0;
-  t_flat_ = 0.0;
   a_max = 1.5;
   scale_ = 1.0;
 
-  // Computing timing parameters of position trajectory
-  if (position_end_ != position_start_) {
-    t_acc_ = v_max / a_max;
-    t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
-    un_dir_vec = (position_end_ - position_start_) /
-      (position_end_ - position_start_).norm();
+  Eigen::Vector3d delta = position_end_ - position_start_;
+  double dist = delta.norm();
+
+  if (dist < 1e-9) {
+    t_acc_ = t_flat_ = t_dec_ = 0.0;
+    return;
   }
 
-  // Computing timing parameters of orientation trajectory
+  // Direction vector
+  un_dir_vec = delta / dist;
+
+  // Initial and final velocity ALONG the trajectory
+  v0 = vel_curr_.dot(un_dir_vec);   // initial
+  double v_f = 0.0;                 // final
+
+  // Time and space of acceleration up to v_max
+  t_acc_ = (v_max_ - v0) / a_max;
+  double d_acc = (v0 + v_max_) * 0.5 * t_acc_;
+
+  // Time and space of deceleration from v_max_ to v_f
+  t_dec_ = (v_max_ - v_f) / a_max;
+  double d_dec = (v_max_ + v_f) * 0.5 * t_dec_;
+
+  // Space available for the constant speed phase
+  double d_flat = dist - d_acc - d_dec;
+
+  if (d_flat >= 0) {
+    // Trapezoidal profile
+    t_flat_ = d_flat / v_max_;
+    v_max_scaled_ = v_max_;
+  } else {
+    // Triangular profile (v_max is not reached)
+    // Recalculate peak velocity compatible with dist, v0 and v_f
+    v_max_scaled_ = std::sqrt(
+      (2.0 * a_max * dist + v0 * v0 + v_f * v_f) / 2.0
+    );
+
+    t_acc_ = (v_max_scaled_ - v0) / a_max;
+    t_dec_ = (v_max_scaled_ - v_f) / a_max;
+    t_flat_ = 0.0;
+  }
+
+  // --------- Timing orientation ----------
   double t_ang = 0.0;
   if (quat_init_ != quat_des_) {
     double dot_product = quat_init_.dot(quat_des_);
