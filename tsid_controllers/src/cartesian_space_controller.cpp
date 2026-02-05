@@ -364,6 +364,7 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
+          //quat.normalize();
 
           Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
 
@@ -383,7 +384,11 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
+          //quat.normalize();
+
           rot_des_ = quat.toRotationMatrix();
+          pinocchio::SE3 se3(rot_des_, desired_pose_[ee_id_[ee]]);
+          tsid::math::SE3ToVector(se3, ref);
         }
 
 
