@@ -404,9 +404,6 @@ void CartesianSpaceController::setPoseCallback(
         position_start_ = h_ee_.translation();
         quat_init_ = h_ee_.rotation();
         h_ee_initial_ = h_ee_;
-        // std::cout << "position_start_ " << position_start_ << std::endl;
-        // std::cout << "position_end_ " << position_end_ << std::endl;
-        // std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
         position_end_ = desired_pose_[ee_id_[ee]];
 
         compute_trajectory_params();
