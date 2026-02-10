@@ -465,9 +465,6 @@ void TsidPositionControl::compute_problem_and_set_command(
   v_.tail(model_.nq - 7) = (q.tail(model_.nq - 7) - q_prev_) / dt_.seconds();
 
   if (first_tsid_iter_) {
-    RCLCPP_INFO(
-      get_node()->get_logger(), "position_end %f",
-      task_joint_posture_->getReference().getValue()[0]);
     q_int_ = q;
     v_int_ = v;
     first_tsid_iter_ = false;

@@ -119,7 +119,7 @@ controller_interface::CallbackReturn CartesianSpaceController::on_configure(
   vel_curr_joint_ = Eigen::VectorXd::Zero(params_.joint_state_names.size());
 
 
-  v_max = params_.ee_vmax;
+  v_max_ = params_.ee_vmax;
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -149,7 +149,9 @@ controller_interface::CallbackReturn CartesianSpaceController::on_activate(
     quat_init_ = H_ee_0_[ee_id_[ee]].rotation();
     quat_des_ = H_ee_0_[ee_id_[ee]].rotation();
     rot_des_ = H_ee_0_[ee_id_[ee]].rotation();
-    vel_curr_ = Eigen::Vector3d::Zero();
+    auto vel_ee = robot_wrapper_->frameVelocity(
+      formulation_->data(), model_.getFrameId(ee_names_[0])).toVector();
+    vel_curr_ = vel_ee.head<3>();
     compute_trajectory_params();
 
 
@@ -362,6 +364,7 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
+          //quat.normalize();
 
           Eigen::Matrix3d rot_des = quat.toRotationMatrix() * h_ee_.rotation();
 
@@ -381,7 +384,11 @@ void CartesianSpaceController::setPoseCallback(
             msg->desired_pose[i].orientation.y,
             msg->desired_pose[i].orientation.z);
 
+          //quat.normalize();
+
           rot_des_ = quat.toRotationMatrix();
+          pinocchio::SE3 se3(rot_des_, desired_pose_[ee_id_[ee]]);
+          tsid::math::SE3ToVector(se3, ref);
         }
 
 
@@ -397,9 +404,6 @@ void CartesianSpaceController::setPoseCallback(
         position_start_ = h_ee_.translation();
         quat_init_ = h_ee_.rotation();
         h_ee_initial_ = h_ee_;
-        // std::cout << "position_start_ " << position_start_ << std::endl;
-        // std::cout << "position_end_ " << position_end_ << std::endl;
-        // std::cout << "quat_des_ " << quat_des_.coeffs() << std::endl;
         position_end_ = desired_pose_[ee_id_[ee]];
 
         compute_trajectory_params();
@@ -451,20 +455,52 @@ void CartesianSpaceController::setPoseCallback(
 
 void CartesianSpaceController::compute_trajectory_params()
 {
-  t_acc_ = 0.0;
-  t_flat_ = 0.0;
   a_max = 1.5;
   scale_ = 1.0;
 
-  // Computing timing parameters of position trajectory
-  if (position_end_ != position_start_) {
-    t_acc_ = v_max / a_max;
-    t_flat_ = ((position_end_ - position_start_).norm() - v_max * t_acc_) / v_max;
-    un_dir_vec = (position_end_ - position_start_) /
-      (position_end_ - position_start_).norm();
+  Eigen::Vector3d delta = position_end_ - position_start_;
+  double dist = delta.norm();
+
+  if (dist < 1e-9) {
+    t_acc_ = t_flat_ = t_dec_ = 0.0;
+    return;
   }
 
-  // Computing timing parameters of orientation trajectory
+  // Direction vector
+  un_dir_vec = delta / dist;
+
+  // Initial and final velocity ALONG the trajectory
+  v0 = vel_curr_.dot(un_dir_vec);   // initial
+  double v_f = 0.0;                 // final
+
+  // Time and space of acceleration up to v_max
+  t_acc_ = (v_max_ - v0) / a_max;
+  double d_acc = (v0 + v_max_) * 0.5 * t_acc_;
+
+  // Time and space of deceleration from v_max_ to v_f
+  t_dec_ = (v_max_ - v_f) / a_max;
+  double d_dec = (v_max_ + v_f) * 0.5 * t_dec_;
+
+  // Space available for the constant speed phase
+  double d_flat = dist - d_acc - d_dec;
+
+  if (d_flat >= 0) {
+    // Trapezoidal profile
+    t_flat_ = d_flat / v_max_;
+    v_max_scaled_ = v_max_;
+  } else {
+    // Triangular profile (v_max is not reached)
+    // Recalculate peak velocity compatible with dist, v0 and v_f
+    v_max_scaled_ = std::sqrt(
+      (2.0 * a_max * dist + v0 * v0 + v_f * v_f) / 2.0
+    );
+
+    t_acc_ = (v_max_scaled_ - v0) / a_max;
+    t_dec_ = (v_max_scaled_ - v_f) / a_max;
+    t_flat_ = 0.0;
+  }
+
+  // --------- Timing orientation ----------
   double t_ang = 0.0;
   if (quat_init_ != quat_des_) {
     double dot_product = quat_init_.dot(quat_des_);
@@ -472,72 +508,76 @@ void CartesianSpaceController::compute_trajectory_params()
     t_ang = theta / omega_max;
   }
 
-  // Chek if the orientation trajectory is longer than the position trajectory and computing the scale factor
-  if (2 * t_acc_ + t_flat_ < t_ang) {
-    scale_ = (2 * t_acc_ + t_flat_) / t_ang;
-    t_flat_ = t_ang - 2 * t_acc_;
-    a_max = a_max * scale_;
+  // If the rotation takes longer, we stretch the linear trajectory
+  double T_pos = t_acc_ + t_flat_ + t_dec_;
+
+  if (T_pos < t_ang) {
+    double scale = T_pos / t_ang;
+    t_acc_ /= scale;
+    t_flat_ /= scale;
+    t_dec_ /= scale;
+    a_max *= scale;
   }
-
-
 }
+
 
 void CartesianSpaceController::interpolate(double t_curr)
 {
+  Eigen::Vector3d delta = position_end_ - position_start_;
+  double dist = delta.norm();
 
-  // Check if the trajectory is already reached
-  if (position_end_ == position_start_ && quat_init_ == quat_des_) {
+  if (dist < 1e-9 && quat_init_ == quat_des_) {
     position_curr_ = position_end_;
-    rot_des_ = quat_init_.toRotationMatrix();
-    return;
-  } else if (position_end_ == position_start_) {
-    position_curr_ = position_end_;
-    if (t_curr > (t_flat_ + 2 * t_acc_)) {
-      rot_des_ = quat_des_.toRotationMatrix();
-      return;
-    } else {
-      Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_flat_ + 2 * t_acc_), quat_des_);
-      rot_des_ = quat.toRotationMatrix();
-      return;
-    }
-  }
-
-  double s = 0;
-  double s_dot = 0;
-
-  //Computing slerp interpolation for the orientation
-  Eigen::Quaterniond quat = quat_init_.slerp(t_curr / (t_flat_ + 2 * t_acc_), quat_des_);
-
-  rot_des_ = quat.toRotationMatrix();
-
-  // Computing the trajectory based on the current interpolation time
-  if (t_curr < t_acc_) {
-    s = 0.5 * a_max * t_curr * t_curr;
-    s_dot = a_max * t_curr;
-  } else if (t_curr >= t_acc_ && t_curr < t_acc_ + t_flat_) {
-    s = 0.5 * v_max * scale_ * t_acc_ + v_max * scale_ * (t_curr - t_acc_ );
-    s_dot = v_max * scale_;
-  } else if (t_curr >= t_acc_ + t_flat_ && t_curr < t_flat_ + 2 * t_acc_) {
-    s = (position_end_ - position_start_).norm() - 0.5 * a_max *
-      (t_flat_ + 2 * t_acc_ - t_curr) *
-      (t_flat_ + 2 * t_acc_ - t_curr);
-    s_dot = v_max * scale_ - a_max * (t_curr - t_flat_ - t_acc_ );
-  } else {
-    s = (position_end_ - position_start_).norm();
-    s_dot = 0;
     rot_des_ = quat_des_.toRotationMatrix();
+    vel_curr_.setZero();
+    return;
   }
 
+  double T_tot = t_acc_ + t_flat_ + t_dec_;
+  t_curr = std::min(t_curr, T_tot);
 
+  double s = 0.0;
+  double s_dot = 0.0;
+
+  if (t_curr < t_acc_) {
+    // Acceleration phase
+    s = v0 * t_curr + 0.5 * a_max * t_curr * t_curr;
+    s_dot = v0 + a_max * t_curr;
+  } else if (t_curr < t_acc_ + t_flat_) {
+    // Constant speed phase
+    double d_acc = v0 * t_acc_ + 0.5 * a_max * t_acc_ * t_acc_;
+    s = d_acc + v_max_scaled_ * (t_curr - t_acc_);
+    s_dot = v_max_scaled_;
+  } else {
+    // Deceleration phase
+    double t_dec_phase = t_curr - t_acc_ - t_flat_;
+
+    double d_acc = v0 * t_acc_ + 0.5 * a_max * t_acc_ * t_acc_;
+    double d_flat = v_max_scaled_ * t_flat_;
+
+    s = d_acc + d_flat +
+      v_max_scaled_ * t_dec_phase -
+      0.5 * a_max * t_dec_phase * t_dec_phase;
+
+    s_dot = v_max_scaled_ - a_max * t_dec_phase;
+  }
+
+  // Position and velocity
   position_curr_ = position_start_ + s * un_dir_vec;
   vel_curr_ = s_dot * un_dir_vec;
+
+  double alpha = (T_tot > 1e-9) ? (t_curr / T_tot) : 1.0;
+  Eigen::Quaterniond quat =
+    quat_init_.slerp(alpha, quat_des_);
+  rot_des_ = quat.toRotationMatrix();
 }
+
 
 void CartesianSpaceController::updateParams()
 {
   TsidPositionControl::updateParams();
 
-  v_max = params_.ee_vmax;
+  v_max_ = params_.ee_vmax;
 
   Eigen::VectorXd kd_gain = Eigen::VectorXd::Zero(6);
   Eigen::VectorXd kp_gain = Eigen::VectorXd::Zero(6);
