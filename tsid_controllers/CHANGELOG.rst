@@ -2,6 +2,19 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix compute trajectory params
+* Improve trapezoidal trajectory
+* Rm unuseful print
+* Normilize quaternion
+* Integrate new variables
+* rm unuseful print
+* Adding variables for continuity trajectory
+* remove not used config and launch file because already defined in the
+  robot
+* Contributors: ileniaperrella, vivianamorlando
+
 0.2.1 (2025-10-09)
 ------------------
 * Fix ament_auto warning about headers install destination
