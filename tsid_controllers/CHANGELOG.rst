@@ -2,8 +2,8 @@
 Changelog for package tsid_controllers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.2.2 (2026-02-20)
+------------------
 * Fix compute trajectory params
 * Improve trapezoidal trajectory
 * Rm unuseful print
