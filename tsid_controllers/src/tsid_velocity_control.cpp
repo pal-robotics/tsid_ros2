@@ -254,10 +254,15 @@ TsidVelocityControl::state_interface_configuration() const
 controller_interface::InterfaceConfiguration
 TsidVelocityControl::command_interface_configuration() const
 {
-
+  std::string interface;
+  if (params_.use_sim_time) {
+    interface = "/position";
+  } else {
+    interface = "/velocity";
+  }
   std::vector<std::string> command_interfaces_config_names;
   for (const auto & joint : params_.joint_command_names) {
-    const auto full_name = joint + "/velocity";
+    const auto full_name = joint + interface;
     command_interfaces_config_names.push_back(full_name);
   }
 
@@ -524,47 +529,91 @@ void TsidVelocityControl::compute_problem_and_set_command(
         -(v_curr * v_curr) / (2 * (-20)) + 0.02;
     }
 
-    if (std::abs(
-        q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
-        q_min_[model_.getJointId(joint) - 2]) < threshold)
-    {
+    if (!params_.use_sim_time) {
+      if (std::abs(
+          q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+          q_min_[model_.getJointId(joint) - 2]) < threshold)
+      {
 
-      RCLCPP_WARN_THROTTLE(
-        get_node()->get_logger(), *get_node()->get_clock(), 5000,
-        "Joint %s reached the lower limit: q = %f, q_min = %f",
-        joint.c_str(), q.tail(model_.nq - 7)[model_.getJointId(joint) - 2],
-        q_min_[model_.getJointId(joint) - 2]);
+        RCLCPP_WARN_THROTTLE(
+          get_node()->get_logger(), *get_node()->get_clock(), 5000,
+          "Joint %s reached the lower limit: q = %f, q_min = %f",
+          joint.c_str(), q.tail(model_.nq - 7)[model_.getJointId(joint) - 2],
+          q_min_[model_.getJointId(joint) - 2]);
 
-      q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-      if (v_com[model_.getJointId(joint) - 2] < 0) {
-        joint_limit_reached_ = true;
-        v_com[model_.getJointId(joint) - 2] = 0;
-      } else {
-        joint_limit_reached_ = false;
+        if (v_com[model_.getJointId(joint) - 2] < 0) {
+          joint_limit_reached_ = true;
+          v_com[model_.getJointId(joint) - 2] = 0;
+        } else {
+          joint_limit_reached_ = false;
+        }
+      } else if (std::abs(
+          q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+          q_max_[model_.getJointId(joint) - 2]) < threshold)
+      {
+        RCLCPP_WARN_THROTTLE(
+          get_node()->get_logger(), *get_node()->get_clock(), 5000,
+          "Joint %s reached the upper limit: q = %f, q_max = %f",
+          joint.c_str(), q.tail(
+            model_.nq - 7)[model_.getJointId(joint) - 2], q_max_[model_.getJointId(joint) - 2]);
+
+        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+
+        if (v_com[model_.getJointId(joint) - 2] > 0) {
+          joint_limit_reached_ = true;
+
+          v_com[model_.getJointId(joint) - 2] = 0;
+        } else {
+          joint_limit_reached_ = false;
+        }
       }
-    } else if (std::abs(
-        q.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
-        q_max_[model_.getJointId(joint) - 2]) < threshold)
-    {
-      RCLCPP_WARN_THROTTLE(
-        get_node()->get_logger(), *get_node()->get_clock(), 5000,
-        "Joint %s reached the upper limit: q = %f, q_max = %f",
-        joint.c_str(), q.tail(
-          model_.nq - 7)[model_.getJointId(joint) - 2], q_max_[model_.getJointId(joint) - 2]);
+      indx++;
+    } else {
+      if (std::abs(
+          q_cmd.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+          q_min_[model_.getJointId(joint) - 2]) < threshold)
+      {
 
-      q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+        RCLCPP_WARN_THROTTLE(
+          get_node()->get_logger(), *get_node()->get_clock(), 5000,
+          "Joint %s reached the lower limit: q = %f, q_min = %f",
+          joint.c_str(), q.tail(model_.nq - 7)[model_.getJointId(joint) - 2],
+          q_min_[model_.getJointId(joint) - 2]);
 
-      if (v_com[model_.getJointId(joint) - 2] > 0) {
-        joint_limit_reached_ = true;
+        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-        v_com[model_.getJointId(joint) - 2] = 0;
-      } else {
-        joint_limit_reached_ = false;
+        if (v_com[model_.getJointId(joint) - 2] < 0) {
+          joint_limit_reached_ = true;
+          v_com[model_.getJointId(joint) - 2] = 0;
+        } else {
+          joint_limit_reached_ = false;
+        }
+      } else if (std::abs(
+          q_cmd.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+          q_max_[model_.getJointId(joint) - 2]) < threshold)
+      {
+        RCLCPP_WARN_THROTTLE(
+          get_node()->get_logger(), *get_node()->get_clock(), 5000,
+          "Joint %s reached the upper limit: q = %f, q_max = %f",
+          joint.c_str(), q.tail(
+            model_.nq - 7)[model_.getJointId(joint) - 2], q_max_[model_.getJointId(joint) - 2]);
+
+        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+
+        if (v_com[model_.getJointId(joint) - 2] > 0) {
+          joint_limit_reached_ = true;
+
+          v_com[model_.getJointId(joint) - 2] = 0;
+        } else {
+          joint_limit_reached_ = false;
+        }
       }
+      indx++;
     }
-    indx++;
   }
+
 
   for (auto joint : joint_command_names_) {
     if (joint_limit_reached_) {
@@ -574,20 +623,42 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
       v_int_ = Eigen::VectorXd::Zero(v_int_.size());
 
-      if (!command_interfaces_[jnt_command_id_[joint]].set_value(
-          0.0))
-      {
-        RCLCPP_ERROR(
-          get_node()->get_logger(),
-          "Failed to set command for joint %s", joint.c_str());
+      if (!params_.use_sim_time) {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            0.0))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+      } else {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            q_cmd[model_.getJointId(joint) - 2]))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+
       }
     } else {
-      if (!command_interfaces_[jnt_command_id_[joint]].set_value(
-          v_com[model_.getJointId(joint) - 2]))
-      {
-        RCLCPP_ERROR(
-          get_node()->get_logger(),
-          "Failed to set command for joint %s", joint.c_str());
+      if (!params_.use_sim_time) {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            v_com[model_.getJointId(joint) - 2]))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+      } else {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            q_cmd[model_.getJointId(joint) - 2]))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+
       }
     }
   }
@@ -616,7 +687,7 @@ void TsidVelocityControl::visualizeBoundingBox(const std::string & effector_name
   }
 
   for (const auto & bb : bounding_boxes_) {
-    if (effector_name == bb.first) {  // Match the effector name with the bounding box key
+    if (effector_name == bb.first) {   // Match the effector name with the bounding box key
       visualization_msgs::msg::Marker bounding_box_marker;
       bounding_box_marker.header.frame_id = "base_footprint";
       bounding_box_marker.ns = "bounding_box";
@@ -627,9 +698,9 @@ void TsidVelocityControl::visualizeBoundingBox(const std::string & effector_name
       bounding_box_marker.type = visualization_msgs::msg::Marker::CUBE;
       bounding_box_marker.action = visualization_msgs::msg::Marker::ADD;
 
-      bounding_box_marker.scale.x = bb.second.x_max - bb.second.x_min;  // x range
-      bounding_box_marker.scale.y = bb.second.y_max - bb.second.y_min;  // y range
-      bounding_box_marker.scale.z = bb.second.z_max - bb.second.z_min;  // z range
+      bounding_box_marker.scale.x = bb.second.x_max - bb.second.x_min;   // x range
+      bounding_box_marker.scale.y = bb.second.y_max - bb.second.y_min;   // y range
+      bounding_box_marker.scale.z = bb.second.z_max - bb.second.z_min;   // z range
 
       bounding_box_marker.pose.position.x = (bb.second.x_max + bb.second.x_min) / 2.0;
       bounding_box_marker.pose.position.y = (bb.second.y_max + bb.second.y_min) / 2.0;
