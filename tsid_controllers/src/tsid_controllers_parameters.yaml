@@ -35,6 +35,12 @@ tsid_controllers:
     description: "Name of the interface to command",
   }
 
+  use_sim_time: {
+    type: bool,
+    default_value: false,
+    description: "If true, the controller will use simulated time",
+  }
+
   ee_names: {
     type: string_array,
     default_value: [],
