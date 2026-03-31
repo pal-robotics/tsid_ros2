@@ -94,6 +94,8 @@ protected:
   template<typename T>
   using InterfaceReferences =
     std::vector<std::vector<std::reference_wrapper<T>>>;
+  void check_limit_reached(
+    const Eigen::VectorXd & q, const Eigen::VectorXd & v);
   InterfaceReferences<hardware_interface::LoanedStateInterface>
   joint_state_interfaces_;
   tsid_controllers::Params params_;
@@ -112,6 +114,8 @@ protected:
   bool joint_limit_reached_;
   std::unordered_map<std::string, BoundingBox> bounding_boxes_;
   pinocchio::Data data_;
+  Eigen::VectorXd q_cmd_;
+  Eigen::VectorXd v_com_;
 
 private:
   tsid::tasks::TaskJointPosVelAccBounds * task_joint_bounds_;
