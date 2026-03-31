@@ -78,7 +78,7 @@ ros2 topic pub /arm_right_joint_space_controller/joint_position_cmd \
     std_msgs/msg/Float64MultiArray "{data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}" \
     --once
 ```
-## 🛠️ Technical Implementation Details
+## Technical Implementation Details
 
 ### Safety & Joint Limits
 When using **Velocity Interface** controllers, a safety synchronization logic is applied to handle the physical limits of the robot:
