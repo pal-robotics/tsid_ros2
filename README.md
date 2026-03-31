@@ -14,14 +14,14 @@ The framework is robot-agnostic. It works by formulating a control task (e.g., r
 At every control cycle, the controller solves for the optimal accelerations ($\dot{v}$) and torques ($\tau$):
 
 $$
-\begin{eqnarray}
-\min_{\tau, \dot{v}} & & \Vert \text{Task Error} \Vert^2 \\
-\text{s.t.} & & M\dot{v} + h = \tau \quad \text{(Dynamics)} \\
-& & \tau^{\min} \leq \tau \leq \tau^{\max} \quad \text{(Torque Limits)} \\
-& & q, v \text{ constraints} \quad \text{(Kinematic Limits)}
-\end{eqnarray}
+\begin{aligned}
+\min_{\tau, \dot{v}} \quad & \Vert \text{Task Error} \Vert^2 \\
+\text{s.t.} \quad & M\dot{v} + h = \tau & \text{(Dynamics)} \\
+& \tau^{\min} \leq \tau \leq \tau^{\max} & \text{(Torque Limits)} \\
+& v^{\min} \leq v + \Delta t\dot{v} \leq v^{\max} & \text{(Velocity Limits)} \\
+& q^{\min} \leq q(t) + \Delta t v(t) + \frac{1}{2}\Delta t^2\dot{v} \leq q^{\max} & \text{(Joint Limits)}
+\end{aligned}
 $$
-
 
 
 ---
