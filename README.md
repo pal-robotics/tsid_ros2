@@ -1,4 +1,4 @@
-# 🤖 TSID Framework: Generic ROS 2 Controllers
+# TSID Framework: Generic ROS 2 Controllers
 
 A powerful, optimization-based control framework for ROS 2, powered by the [Task-Space Inverse Dynamics (TSID)](https://github.com/stack-of-tasks/tsid) library. 
 
@@ -6,7 +6,7 @@ This repository provides a suite of `ros2_controllers` that allow robots to perf
 
 ---
 
-## 🏗️ Architecture & Theory
+## Architecture & Theory
 
 The framework is robot-agnostic. It works by formulating a control task (e.g., reaching a coordinate or a joint state) as an optimization problem.
 
@@ -26,7 +26,7 @@ $$
 
 ---
 
-## 🕹️ Available Controller Types
+## Available Controller Types
 
 | Controller Class | Description | Command Type |
 | :--- | :--- | :--- |
@@ -37,7 +37,7 @@ $$
 
 ---
 
-## 📂 Repository structure
+## Repository structure
 
 ```text
 .
@@ -92,7 +92,7 @@ For Cartesian controllers, the system can be commanded in different frames via s
 
 ---
 
-## ✉️ Custom Message API
+## Custom Message API
 
 To interact with Cartesian and Torque-aware controllers, use the provided messages in `tsid_controller_msgs`:
 
