@@ -41,10 +41,9 @@ $$
 
 ```text
 .
-├── tsid_controllers/         # Source code for ROS 2 controller plugins
-├── tsid_controller_msgs/    # Custom ROS 2 messages (EePos, EeWrench, etc.)
-├── config/                  # Generic and robot-specific YAML parameters
-└── examples/                # Implementation examples (e.g., TIAGo Pro)
+├── tsid_controllers/          # Main ROS 2 controller plugin implementations
+├── tsid_controller_msgs/     # Custom message definitions (EePos, EeWrench)
+└── tsid_interactive_marker/  # Tools for RViz-based interactive control
 ```
 
 ---
