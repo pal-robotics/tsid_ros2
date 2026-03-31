@@ -498,24 +498,93 @@ void TsidVelocityControl::compute_problem_and_set_command(
 
   Eigen::VectorXd a;
   Eigen::VectorXd v_cmd;
-  Eigen::VectorXd q_cmd;
 
   a = formulation_->getAccelerations(sol);
 
   v_cmd = v_int_ + a * 0.5 * dt_.seconds();
 
-  auto v_com = v_cmd.tail(model_.nv - 6);
-  v_int_.tail(model_.nv - 6) = v_com;
+  v_com_ = v_cmd.tail(model_.nv - 6);
+  v_int_.tail(model_.nv - 6) = v_com_;
 
   q_int_ = pinocchio::integrate(
     model_, q_int_, v_cmd * dt_.seconds());
 
-  q_cmd = q_int_.tail(model_.nq - 7);
+  q_cmd_ = q_int_.tail(model_.nq - 7);
 
+  joint_limit_reached_ = false;
+
+  check_limit_reached(q, v);
+
+  for (auto joint : joint_command_names_) {
+    if (joint_limit_reached_) {
+      RCLCPP_WARN_THROTTLE(
+        get_node()->get_logger(), *get_node()->get_clock(), 5000,
+        "Joint limit reached");
+
+      v_int_ = Eigen::VectorXd::Zero(v_int_.size());
+
+      if (!params_.use_sim_time) {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            0.0))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+      } else {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            q_cmd_[model_.getJointId(joint) - 2]))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+
+      }
+    } else {
+      if (!params_.use_sim_time) {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            v_com_[model_.getJointId(joint) - 2]))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+      } else {
+        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
+            q_cmd_[model_.getJointId(joint) - 2]))
+        {
+          RCLCPP_ERROR(
+            get_node()->get_logger(),
+            "Failed to set command for joint %s", joint.c_str());
+        }
+
+      }
+    }
+  }
+
+  q_prev_ = q.tail(model_.nq - 7);
+  std_msgs::msg::Float64MultiArray pub;
+
+  for (Eigen::Index i = 0; i < v_com_.size(); i++) {
+    pub.data.push_back(v_com_[i]);
+  }
+  publisher_curr_vel_->publish(pub);
+
+  std_msgs::msg::Float64MultiArray pub_pos;
+  for (Eigen::Index i = 0; i < q_cmd_.size(); i++) {
+    pub_pos.data.push_back(q_cmd_[i]);
+  }
+  publisher_curr_pos_->publish(pub_pos);
+
+}
+
+void TsidVelocityControl::check_limit_reached(
+  const Eigen::VectorXd & q, const Eigen::VectorXd & v)
+{
+  int indx = 0;
   double threshold = 0.2;
 
-  int indx = 0;
-  joint_limit_reached_ = false;
   while (!joint_limit_reached_ && indx < static_cast<int>(joint_command_names_.size())) {
 
     auto joint = joint_command_names_[indx];
@@ -541,11 +610,11 @@ void TsidVelocityControl::compute_problem_and_set_command(
           joint.c_str(), q.tail(model_.nq - 7)[model_.getJointId(joint) - 2],
           q_min_[model_.getJointId(joint) - 2]);
 
-        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+        q_cmd_[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-        if (v_com[model_.getJointId(joint) - 2] < 0) {
+        if (v_com_[model_.getJointId(joint) - 2] < 0) {
           joint_limit_reached_ = true;
-          v_com[model_.getJointId(joint) - 2] = 0;
+          v_com_[model_.getJointId(joint) - 2] = 0;
         } else {
           joint_limit_reached_ = false;
         }
@@ -559,12 +628,12 @@ void TsidVelocityControl::compute_problem_and_set_command(
           joint.c_str(), q.tail(
             model_.nq - 7)[model_.getJointId(joint) - 2], q_max_[model_.getJointId(joint) - 2]);
 
-        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+        q_cmd_[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-        if (v_com[model_.getJointId(joint) - 2] > 0) {
+        if (v_com_[model_.getJointId(joint) - 2] > 0) {
           joint_limit_reached_ = true;
 
-          v_com[model_.getJointId(joint) - 2] = 0;
+          v_com_[model_.getJointId(joint) - 2] = 0;
         } else {
           joint_limit_reached_ = false;
         }
@@ -572,7 +641,7 @@ void TsidVelocityControl::compute_problem_and_set_command(
       indx++;
     } else {
       if (std::abs(
-          q_cmd.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+          q_cmd_.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
           q_min_[model_.getJointId(joint) - 2]) < threshold)
       {
 
@@ -582,16 +651,16 @@ void TsidVelocityControl::compute_problem_and_set_command(
           joint.c_str(), q.tail(model_.nq - 7)[model_.getJointId(joint) - 2],
           q_min_[model_.getJointId(joint) - 2]);
 
-        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+        q_cmd_[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-        if (v_com[model_.getJointId(joint) - 2] < 0) {
+        if (v_com_[model_.getJointId(joint) - 2] < 0) {
           joint_limit_reached_ = true;
-          v_com[model_.getJointId(joint) - 2] = 0;
+          v_com_[model_.getJointId(joint) - 2] = 0;
         } else {
           joint_limit_reached_ = false;
         }
       } else if (std::abs(
-          q_cmd.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
+          q_cmd_.tail(model_.nq - 7)[model_.getJointId(joint) - 2] -
           q_max_[model_.getJointId(joint) - 2]) < threshold)
       {
         RCLCPP_WARN_THROTTLE(
@@ -600,12 +669,12 @@ void TsidVelocityControl::compute_problem_and_set_command(
           joint.c_str(), q.tail(
             model_.nq - 7)[model_.getJointId(joint) - 2], q_max_[model_.getJointId(joint) - 2]);
 
-        q_cmd[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
+        q_cmd_[model_.getJointId(joint) - 2] = q.tail(model_.nq - 7)[model_.getJointId(joint) - 2];
 
-        if (v_com[model_.getJointId(joint) - 2] > 0) {
+        if (v_com_[model_.getJointId(joint) - 2] > 0) {
           joint_limit_reached_ = true;
 
-          v_com[model_.getJointId(joint) - 2] = 0;
+          v_com_[model_.getJointId(joint) - 2] = 0;
         } else {
           joint_limit_reached_ = false;
         }
@@ -614,70 +683,8 @@ void TsidVelocityControl::compute_problem_and_set_command(
     }
   }
 
-
-  for (auto joint : joint_command_names_) {
-    if (joint_limit_reached_) {
-      RCLCPP_WARN_THROTTLE(
-        get_node()->get_logger(), *get_node()->get_clock(), 5000,
-        "Joint limit reached");
-
-      v_int_ = Eigen::VectorXd::Zero(v_int_.size());
-
-      if (!params_.use_sim_time) {
-        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
-            0.0))
-        {
-          RCLCPP_ERROR(
-            get_node()->get_logger(),
-            "Failed to set command for joint %s", joint.c_str());
-        }
-      } else {
-        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
-            q_cmd[model_.getJointId(joint) - 2]))
-        {
-          RCLCPP_ERROR(
-            get_node()->get_logger(),
-            "Failed to set command for joint %s", joint.c_str());
-        }
-
-      }
-    } else {
-      if (!params_.use_sim_time) {
-        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
-            v_com[model_.getJointId(joint) - 2]))
-        {
-          RCLCPP_ERROR(
-            get_node()->get_logger(),
-            "Failed to set command for joint %s", joint.c_str());
-        }
-      } else {
-        if (!command_interfaces_[jnt_command_id_[joint]].set_value(
-            q_cmd[model_.getJointId(joint) - 2]))
-        {
-          RCLCPP_ERROR(
-            get_node()->get_logger(),
-            "Failed to set command for joint %s", joint.c_str());
-        }
-
-      }
-    }
-  }
-
-  q_prev_ = q.tail(model_.nq - 7);
-  std_msgs::msg::Float64MultiArray pub;
-
-  for (Eigen::Index i = 0; i < v_com.size(); i++) {
-    pub.data.push_back(v_com[i]);
-  }
-  publisher_curr_vel_->publish(pub);
-
-  std_msgs::msg::Float64MultiArray pub_pos;
-  for (Eigen::Index i = 0; i < q_cmd.size(); i++) {
-    pub_pos.data.push_back(q_cmd[i]);
-  }
-  publisher_curr_pos_->publish(pub_pos);
-
 }
+
 void TsidVelocityControl::visualizeBoundingBox(const std::string & effector_name)
 {
   // check if the effector_name is a valid end-effector
