@@ -105,11 +105,3 @@ Used for operational space positioning.
 Used for force-feedback control tasks.
 * **`ee_name`** (`string[]`): The target link.
 * **`desired_wrench`** (`geometry_msgs/Wrench[]`): Target force/torque values for hardware equipped with F/T sensors.
-
----
-
-## 🔧 Porting to a New Robot
-To adapt this framework for a custom robot, follow these requirements:
-1. **Inertial Data:** Your URDF must have accurate `mass` and `inertia` tags; the TSID dynamics solver relies on these for the $M\dot{v} + h = \tau$ calculation.
-2. **Task Weights:** Create a YAML configuration to set the priority of different tasks. For example, give a higher weight to "Joint Limit Avoidance" than to "Tracking Accuracy" to ensure safety.
-3. **Hardware Interface:** Map the controller plugins in your `ros2_control` configuration to the appropriate `position`, `velocity`, or `effort` interfaces supported by your hardware abstraction layer.
