@@ -311,6 +311,14 @@ controller_interface::CallbackReturn TsidVelocityControl::on_activate(
   traj_joint_posture_->setReference(q0.tail(robot_wrapper_->nq() - 7));
   task_joint_posture_->setReference(traj_joint_posture_->computeNext());
 
+  // Resynchronize the integrated state (q_int_, v_int_) on the measured one at each activation, not only after
+  // on_configure: otherwise, when the controller is deactivated then reactivated without being reloaded, q_int_ keeps
+  // the position reached at the end of the previous activation while the joints may have been moved meanwhile by
+  // another controller. The joint bounds being applied on q_int_, the joints are then wrongly stopped before their
+  // actual limits.
+  first_tsid_iter_ = true;
+  joint_limit_reached_ = false;
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
